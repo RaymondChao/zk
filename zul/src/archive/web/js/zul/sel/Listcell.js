@@ -125,18 +125,21 @@ zul.sel.Listcell = zk.$extends(zul.LabelImageWidget, {
 					&& (!isGrp || box.groupSelect)) {
 				var chkable = p.isCheckable(),
 					multi = box.isMultiple();
-				s += '<span id="' + p.uuid + '-cm" class="' + p.$s('checkable') 
-					+ ' ' + (multi ? p.$s('checkbox') : p.$s('radio'));
-				
-				if (!chkable || p.isDisabled())
-					s += ' ' + p.$s('disabled');
-				
-				s += '"';
-				if (!chkable)
-					s += ' style="visibility:hidden"';
-				
-				s += '><i class="' + p.$s('icon') + ' ' 
-					+ (multi ? 'z-icon-check' : 'z-icon-radio') + '"></i></span>';
+				//B70-ZK-2053:make sure checkmark won't display on muiltble listgroup
+				if (!isGrp || multi) {
+					s += '<span id="' + p.uuid + '-cm" class="' + p.$s('checkable') 
+						+ ' ' + (multi ? p.$s('checkbox') : p.$s('radio'));
+					
+					if (!chkable || p.isDisabled())
+						s += ' ' + p.$s('disabled');
+					
+					s += '"';
+					if (!chkable)
+						s += ' style="visibility:hidden"';
+					
+					s += '><i class="' + p.$s('icon') + ' ' 
+						+ (multi ? 'z-icon-check' : 'z-icon-radio') + '"></i></span>';
+				}
 			}
 			// insert toggle icon
 			if (isGrp) {
