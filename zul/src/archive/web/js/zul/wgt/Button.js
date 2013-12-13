@@ -29,7 +29,7 @@ it will be useful, but WITHOUT ANY WARRANTY.
 			}
 		}
 	}: zk.$void;
-	var _fixwidth = zk.ie ? function (btn) {
+	var _fixwidth = zk.ie < 11 ? function (btn) {
 		if (btn.desktop && btn._mold == 'trendy') {
 			var width = btn.$n().style.width;
 			btn.$n('box').style.width = !width || width == "auto" ? "": "100%";
@@ -37,7 +37,7 @@ it will be useful, but WITHOUT ANY WARRANTY.
 	}: zk.$void;
 
 	function _initUpld(wgt) {
-		if (!zk.ie && wgt._mold == 'trendy')
+		if (!(zk.ie < 11) && wgt._mold == 'trendy')
 			zWatch.listen({onSize: wgt});
 		var v;
 		if (v = wgt._upload)
@@ -47,7 +47,7 @@ it will be useful, but WITHOUT ANY WARRANTY.
 	function _cleanUpld(wgt) {
 		var v;
 		if (v = wgt._uplder) {
-			if (!zk.ie && wgt._mold == 'trendy')
+			if (!(zk.ie < 11) && wgt._mold == 'trendy')
 				zWatch.unlisten({onSize: wgt});
 			wgt._uplder = null;
 			v.destroy();
@@ -177,15 +177,25 @@ zul.wgt.Button = zk.$extends(zul.LabelImageWidget, {
 		    	return v;
 		    }, 
 		    function (v, opts) {
-		    	if (this.desktop) {
-		    		if (this._mold == "os") {
-		    			var n = this.$n(),
-							zclass = this.getZclass();
-		    			if (zclass)
-		    				jq(n)[(n.disabled = v) ? "addClass": "removeClass"](zclass + "-disd");
-		    		} else
-		    			this.rerender(opts && opts.skip ? -1 : 0); //bind and unbind required (because of many CSS classes to update)
-		    	}
+		    	var mold = this._mold;
+		    	if (mold == "os" || mold == "default") {
+		    		var n = this.$n(),
+						zclass = this.getZclass(),
+						self = this,
+						doDisable = function() {
+		    				if (self.desktop) {
+		    					var updateClass = (n.disabled = v) ? "addClass": "removeClass";
+		    					jq(n)[updateClass](zclass + "-disd");
+		    				}
+		    			};
+		    		// ZK-2042: delay the setting when the button's type is submit
+		    		if (this._type == 'submit') 
+		    			setTimeout(doDisable, 50);
+		    		else
+		    			doDisable();
+		    	} else if (this.desktop)
+	    			this.rerender(opts && opts.skip ? -1 : 0); //bind and unbind required (because of many CSS classes to update)
+		    	
 		    }
 		],
 		image: function (v) {
@@ -310,12 +320,10 @@ zul.wgt.Button = zk.$extends(zul.LabelImageWidget, {
 			wgt._delayFocus = true;
 			setTimeout(function() {
 				wgt.focus_(timeout);
+				wgt._delayFocus = null;				
 			}, 0);
-		} else {
-			wgt._delayFocus = null;
-		}
-		
-		//Bug ZK-354: refer to _docMouseDown in mount.js for details
+		}		
+		// Bug ZK-354: refer to _docMouseDown in mount.js for details
 		if (!zk.focusBackFix || !this._upload)
 			zk(btn).focus(timeout);
 		return true;
@@ -356,7 +364,7 @@ zul.wgt.Button = zk.$extends(zul.LabelImageWidget, {
 			zk(this.$n('box')).disableSelection();
 
 			n = this.$n('btn');
-			if (zk.ie) zWatch.listen({onSize: this}); //always listen if zk.ie
+			if (zk.ie < 11) zWatch.listen({onSize: this}); //always listen if zk.ie
 		}
 
 		this.domListen_(n, "onFocus", "doFocus_")
@@ -373,28 +381,28 @@ zul.wgt.Button = zk.$extends(zul.LabelImageWidget, {
 			this.domUnlisten_(n, "onFocus", "doFocus_")
 				.domUnlisten_(n, "onBlur", "doBlur_");
 		}
-		if (zk.ie && trendy)
+		if (zk.ie < 11 && trendy)
 			zWatch.unlisten({onSize: this});
 
 		this.$supers(Button, 'unbind_', arguments);
 	},
 
 	//@Override
-	setWidth: zk.ie ? function (v) {
+	setWidth: zk.ie < 11 ? function (v) {
 		this.$supers('setWidth', arguments);
 		_fixwidth(this);
 	}: function () {
 		this.$supers('setWidth', arguments);
 	},
 	//@Override
-	setHeight: zk.ie ? function (v) {
+	setHeight: zk.ie < 11 ? function (v) {
 		this.$supers('setHeight', arguments);
 		_fixhgh(this);
 	}: function () {
 		this.$supers('setHeight', arguments);
 	},
 
-	onSize: zk.ie ? function () {
+	onSize: zk.ie < 11 ? function () {
 		_fixhgh(this);
 		_fixwidth(this);
 		if (this._uplder)
@@ -452,7 +460,7 @@ zul.wgt.Button = zk.$extends(zul.LabelImageWidget, {
 	},
 	doMouseOut_: function (evt) {
 		if (!this._disabled && this != Button._curdn
-		&& !(zk.ie && jq.isAncestor(this.$n('box'), evt.domEvent.relatedTarget || evt.domEvent.toElement)))
+		&& !((zk.ie < 11) && jq.isAncestor(this.$n('box'), evt.domEvent.relatedTarget || evt.domEvent.toElement)))
 			jq(this.$n('box')).removeClass(this.getZclass() + "-over");
 		this.$supers('doMouseOut_', arguments);
 	},
@@ -468,7 +476,7 @@ zul.wgt.Button = zk.$extends(zul.LabelImageWidget, {
 			jq(this.$n('box')).addClass(zcls + "-clk")
 				.addClass(zcls + "-over")
 			if (!zk.ie || !this._uplder) zk(this.$n('btn')).focus(30);
-				//change focus will disable upload in IE
+				// ZK-2044: change focus will disable upload in IE
 		}
 		zk.mouseCapture = this; //capture mouse up
 		this.$supers('doMouseDown_', arguments);
@@ -480,7 +488,7 @@ zul.wgt.Button = zk.$extends(zul.LabelImageWidget, {
 			var zcls = this.getZclass();
 			jq(this.$n('box')).removeClass(zcls + "-clk")
 				.removeClass(zcls + "-over");
-			if (zk.ie && this._uplder) zk(this.$n('btn')).focus(30);
+			if (zk.ie < 11 && this._uplder) zk(this.$n('btn')).focus(30);
 		}
 		this.$supers('doMouseUp_', arguments);
 	},

@@ -328,6 +328,10 @@ public class Grid extends MeshElement {
 						initModel();
 					} else {
 						resetDataLoader();  //enforce recreate dataloader
+						
+						// Bug ZK-1895
+						//The attribute shall be removed, otherwise DataLoader will not syncModel when setModel
+						Executions.getCurrent().removeAttribute("zkoss.Grid.deferInitModel_"+getUuid());
 					}
 				}
 			} else if (_model != null){ //rows not created yet
@@ -707,7 +711,9 @@ public class Grid extends MeshElement {
 		if (_dataListener == null)
 			_dataListener = new ListDataListener() {
 				public void onChange(ListDataEvent event) {
-					onListDataChange(event);
+					// ZK-1864: share listmodelist cause un-predictable reload
+					if (event.getType() != ListDataEvent.SELECTION_CHANGED)
+						onListDataChange(event);
 				}
 			};
 			
@@ -889,6 +895,7 @@ public class Grid extends MeshElement {
 			}
 
 			int j = 0;
+			int index = 0; // ZK-1867: Set visible of row doesn't work correctly
 			int realOfs = ofs - getDataLoader().getOffset();
 			if (realOfs < 0) realOfs = 0;
 			boolean open = true;
@@ -898,11 +905,14 @@ public class Grid extends MeshElement {
 
 				if (row.isVisible()
 				&& (open || row instanceof Groupfoot || row instanceof Group)) {
-					renderer.render(row, j + ofs); 
+					renderer.render(row, index + ofs); 
 					++j;
 				}
 				if (row instanceof Group)
 					open = ((Group) row).isOpen();
+
+				// B65-ZK-1867 and Z60-Grid-GroupsModelArray-Paging-noROD.zul
+				index++;
 			}
 
 		} catch (Throwable ex) {

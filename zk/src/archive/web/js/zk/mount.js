@@ -231,7 +231,7 @@ function zkamn(pkg, fn) {
 			if (zk.loading)
 				return zk.afterLoad(mtBL0);
 
-			if (zk.ie && !jq.isReady) //3055849: ie6/ie7 has to wait until isReady (tonyq reported ie8 has similar issue)
+			if (zk.ie < 11 && !jq.isReady) //3055849: ie6/ie7 has to wait until isReady (tonyq reported ie8 has similar issue)
 				return jq(mtBL0);
 
 			var inf = _crInfBL1.shift();
@@ -341,10 +341,12 @@ function zkamn(pkg, fn) {
 		} else {
 			if ((stub = type == "#stub") || type == "#stubs") {
 				if (!(wgt = _wgt_$(uuid) //use the original one since filter() might applied
-				|| zAu._wgt$(uuid))) //search detached (in prev cmd of same AU)
+						|| zAu._wgt$(uuid))) //search detached (in prev cmd of same AU)
 					throw "Unknown stub "+uuid;
 				var w = new Widget();
-				if (wgt.desktop) //Bug ZK-1596: may already unbind
+				//Bug ZK-1596: may already unbind
+				//Bug ZK-1821: should also unbind wgt if in ROD status
+				if (wgt.desktop || wgt.z_rod === 9)
 					wgt.unbind(); //reuse it as new widget, bug ZK-1589: should unbind first then replace
 				zk._wgtutl.replace(wgt, w, stub);
 					//to reuse wgt, we replace it with a dummy widget, w
@@ -572,7 +574,7 @@ jq(function() {
 		
 		//Bug 2799334, 2635555 and 2807475: need to enforce a focus event (IE only)
 		//However, ZK-354: if target is upload, we can NOT focus to it. Thus, focusBackFix was introduced
-		if (old && zk.ie) {
+		if (old && zk.ie < 11) {
 			var n = jq(old)[0];
 			if (n)
 				setTimeout(function () {
@@ -673,14 +675,14 @@ jq(function() {
 
 		var wgt = Widget.$(evt, {child:true});
 		if (wgt) {
-			if (zk.ie)
+			if (zk.ie < 11)
 				evt.which = 3;
 			var wevt = new zk.Event(wgt, 'onRightClick', evt.mouseData(), {}, evt);
 			_doEvt(wevt);
 			if (wevt.domStopped)
 				return false;
 		}
-		return !zk.ie || evt.returnValue;
+		return !(zk.ie < 11) || evt.returnValue;
 	})
 	.bind('zmousedown', function(evt){
 		if (zk.mobile) {
@@ -784,7 +786,7 @@ jq(function() {
 		if ((_reszInf.lastTime && now < _reszInf.lastTime) || _reszInf.inResize)
 			return; //ignore resize for a while (since onSize might trigger onsize)
 
-		var delay = zk.ie || zk.android ? 250: 50;
+		var delay = (zk.ie < 11) || zk.android ? 250: 50;
 		_reszInf.time = now + delay - 1; //handle it later
 		setTimeout(_docResize, delay);
 
@@ -806,6 +808,13 @@ jq(function() {
 	.unload(function () {
 		zk.unloading = true; //to disable error message
 
+		// B65-ZK-2051: Remove desktop if is IE.
+		if (zk.ie) {
+			rmDesktop();
+		}
+	});
+	
+	function rmDesktop () {
 		//20061109: Tom Yeh: Failed to disable Opera's cache, so it's better not
 		//to remove the desktop.
 		//Good news: Opera preserves the most udpated content, when BACK to
@@ -820,7 +829,7 @@ jq(function() {
 			} catch (e) { //silent
 			}
 		}
-	});
+	};
 
 	var _oldBfUnload = window.onbeforeunload;
 	window.onbeforeunload = function () {
@@ -840,6 +849,11 @@ jq(function() {
 		}
 
 		zk.unloading = true; //FF3 aborts ajax before calling window.onunload
+		
+		// B65-ZK-2051: Remove desktop if not IE.
+		if (!zk.ie) {
+			rmDesktop();
+		}
 		//Return nothing
 	};
 

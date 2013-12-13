@@ -392,8 +392,13 @@ zul.box.Box = zk.$extends(zul.Widget, {
 						kid.setFlexSize_({height:'', width:''});
 						var chdex = kid.$n('chdex');
 						if (chdex) {
-							chdex.style.height = szes && k < szes.length ? szes[k] : '';
-							chdex.style.width = '';
+							var n;
+							if ((n = kid.$n()) && (n.scrollTop || n.scrollLeft)) // keep the scroll status
+								;// do nothing Bug ZK-1885: scrollable div (with vflex) and tooltip
+							else {
+								chdex.style.height = szes && k < szes.length ? szes[k] : '';
+								chdex.style.width = '';
+							}
 						}
 					}
 				}
@@ -405,8 +410,13 @@ zul.box.Box = zk.$extends(zul.Widget, {
 						kid.setFlexSize_({height:'', width:''});
 						var chdex = kid.$n('chdex');
 						if (chdex) {
-							chdex.style.width = szes && k < szes.length ? szes[k] : '';
-							chdex.style.height = '';
+							var n;
+							if ((n = kid.$n()) && (n.scrollTop || n.scrollLeft)) // keep the scroll status
+								;// do nothing Bug ZK-1885: scrollable div (with vflex) and tooltip
+							else {
+								chdex.style.width = szes && k < szes.length ? szes[k] : '';
+								chdex.style.height = '';
+							}
 						}
 					}
 				}
@@ -509,7 +519,7 @@ zul.box.Box = zk.$extends(zul.Widget, {
 					}
 				}
 				var offhgh = fixedSize && vert ? zk.parseInt(szes[k]) : 
-						zk.ie && xc.id && xc.id.endsWith('-chdex2') && xc.style.height && xc.style.height.endsWith('px') ? 
+						zk.ie < 11 && xc.id && xc.id.endsWith('-chdex2') && xc.style.height && xc.style.height.endsWith('px') ? 
 						zk.parseInt(xc.style.height) : zkc.offsetHeight(),
 					offwdh = fixedSize && !vert ? zk.parseInt(szes[k]) : zkc.offsetWidth(),
 					cwdh = offwdh + zkc.sumStyles("lr", jq.margins),
@@ -712,7 +722,7 @@ zul.box.Box = zk.$extends(zul.Widget, {
 					if (vert)
 						c.style.width = zk(c).revisedWidth(tdsz, !zk.safari) + 'px';
 					else 
-						c.style.height = zk(c).revisedHeight(tdsz - ((zk.ie && c.offsetTop > 0) ? (c.offsetTop * 2) : 0), !zk.safari) + 'px';
+						c.style.height = zk(c).revisedHeight(tdsz - ((zk.ie < 11 && c.offsetTop > 0) ? (c.offsetTop * 2) : 0), !zk.safari) + 'px';
 				}
 			}
 		}

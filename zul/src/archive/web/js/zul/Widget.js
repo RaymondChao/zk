@@ -70,7 +70,8 @@ it will be useful, but WITHOUT ANY WARRANTY.
 			_tt_inf = null;
 
 			var n = _tt_ref.$n();
-			if (n && !zk(n).isRealVisible()) //gone
+			// B65-ZK-1934: If reference's dom is null or not visible, then just return.
+			if (!n || !zk(n).isRealVisible()) //gone
 				return _tt_tip = _tt_ref = null;
 
 			var params = inf.params,
@@ -89,7 +90,7 @@ it will be useful, but WITHOUT ANY WARRANTY.
 		_tt_clearClosing_();
 
 		var tip = _tt_tip;
-		if (tip) {
+		if (tip && tip.desktop) { //check still attached to desktop
 			// Bug ZK-1222, ZK-1594
 			//
 			// If the tooltip (popup) and mouse pointer overlapped, a TooltipOut event 
@@ -98,7 +99,7 @@ it will be useful, but WITHOUT ANY WARRANTY.
 			// 
 			// FireFox only. If mouse pointer still overlapped on tooltip, do not close.
 			// IE10: Bug ZK-1519
-	    	if (zk.ie > 9 || zk.ff) {
+	    	if ((zk.ie == 10) || zk.ff) {
 				var $tip = jq(tip.$n()),
 					$tipOff = $tip.offset(),
 					pointer = zk.currentPointer;
@@ -647,7 +648,7 @@ zul.Widget = zk.$extends(zk.Widget, {
 			evt.stop({dom:true, revoke: true}); //Bug 1756559: don't stop DOM since it affects IE and Opera's SELECT's closing dropdown
 
 		//Bug 2041347
-		if (zk.ie && keyCode == 112) {
+		if (zk.ie < 11 && keyCode == 112) {
 			zk._oldOnHelp = window.onhelp;
 			window.onhelp = function () {return false;}
 			setTimeout(function () {window.onhelp = zk._oldOnHelp; zk._oldOnHelp = null;}, 200);

@@ -99,7 +99,11 @@ public class ExecutionImpl extends AbstractExecution {
 		_response = response;
 		_xelctx = new ReqContext();
 
-		Servlets.getBrowser(request); //update request info
+
+		// the execution may be fake if request is null.
+		// Fixed for ZK-1890: Can't subscribe eventqueue in desktop cleanup
+		if (request != null)
+			Servlets.getBrowser(request); //update request info
 
 		_attrs = new AttributesMap() {
 			@SuppressWarnings("unchecked")
@@ -310,6 +314,10 @@ public class ExecutionImpl extends AbstractExecution {
 		return _voided;
 	}
 	public void setVoided(boolean voided) {
+		Object created = getAttribute(org.zkoss.zk.ui.impl.Attributes.PAGE_CREATED);
+		if (created instanceof Boolean && ((Boolean)created).booleanValue())
+			if (!getDesktop().getComponents().isEmpty())
+				throw new IllegalStateException("The page has been created, so the execution cannot be voided!");
 		_voided = voided;
 	}
 

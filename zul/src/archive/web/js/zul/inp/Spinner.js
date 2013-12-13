@@ -204,7 +204,7 @@ zul.inp.Spinner = zk.$extends(zul.inp.NumberInputWidget, {
 		this._onChanging();
 		this._stopAutoIncProc();
 		
-		if (zk.ie) {
+		if (zk.ie < 11) {
 			var len = inp.value.length;
 			zk(inp).setSelectionRange(len, len);
 		}
@@ -227,8 +227,12 @@ zul.inp.Spinner = zk.$extends(zul.inp.NumberInputWidget, {
 	},
 	_increase: function (is_add){
 		var inp = this.getInputNode(),
-			value = parseInt(inp.value, 10),
-			result = is_add ? (value + this._step) : (value - this._step);
+			value = this.coerceFromString_(inp.value); //ZK-1851 convert input value using pattern
+
+		if (value && value.error)
+			return; //nothing to do if error happens
+		
+		var	result = is_add ? (value + this._step) : (value - this._step);
 		
 		// control overflow
 		if (result > Math.pow(2,31)-1)
@@ -240,7 +244,7 @@ zul.inp.Spinner = zk.$extends(zul.inp.NumberInputWidget, {
 		if (this._max!=null && result > this._max) result = value;
 		else if (this._min!=null && result < this._min) result = value;
 
-		inp.value = result;
+		inp.value = this.coerceToString_(result); //ZK-1851 convert result using pattern
 		
 		this._onChanging();
 		

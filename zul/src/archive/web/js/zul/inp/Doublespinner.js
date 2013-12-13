@@ -277,7 +277,7 @@ zul.inp.Doublespinner = zk.$extends(zul.inp.NumberInputWidget, {
 		this._onChanging();
 		this._stopAutoIncProc();
 		
-		if (zk.ie) {
+		if (zk.ie < 11) {
 			var len = inp.value.length;
 			zk(inp).setSelectionRange(len, len);
 		}
@@ -300,8 +300,12 @@ zul.inp.Doublespinner = zk.$extends(zul.inp.NumberInputWidget, {
 	},
 	_increase: function (asc){
 		var inp = this.getInputNode(),
-			value = this.coerceFromString_(inp.value),
-			shiftLen = Math.max(_digitsAfterDecimal(value), this._fixedDigits),
+			value = this.coerceFromString_(inp.value);
+		
+		if (value && value.error)
+			return; //nothing to do if error happens
+		
+		var	shiftLen = Math.max(_digitsAfterDecimal(value), this._fixedDigits),
 			result = _shiftedSum(value, this._step, shiftLen, asc); // B50-3301517
 		
 		// control overflow

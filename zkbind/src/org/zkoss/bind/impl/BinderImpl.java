@@ -133,6 +133,7 @@ public class BinderImpl implements Binder,BinderCtrl,Serializable{
 
 	public static final String SAVE_BASE = "$SAVE_BASE$"; //bean base of a save operation
 	public static final String ON_BIND_INIT = "onBindInit"; //do component binding initialization
+	public static final String ON_BIND_CLEAN = "onBindClean"; //do component binding clean up
 	public static final String MODEL = "$MODEL$"; //collection model for index tracking
 	
 	//events for dummy target
@@ -820,7 +821,7 @@ public class BinderImpl implements Binder,BinderCtrl,Serializable{
 			String initExpr, Map<String, Object> bindingArgs, String converterExpr, Map<String, Object> converterArgs) {
 		
 		final ComponentCtrl compCtrl = (ComponentCtrl) comp;
-		final Annotation ann = AnnotationUtil.getOverrideAnnotation(compCtrl, attr, Binder.ZKBIND);
+		final Annotation ann = AnnotationUtil.getSystemAnnotation(compCtrl, attr);
 		String loadrep = null;
 		Class<?> attrType = null;//default is any class
 		if (ann != null) {
@@ -856,7 +857,7 @@ public class BinderImpl implements Binder,BinderCtrl,Serializable{
 
 	private String getSystemConverter(Component comp, String attr) {
 		final ComponentCtrl compCtrl = (ComponentCtrl) comp;
-		final Annotation ann = AnnotationUtil.getOverrideAnnotation(compCtrl,attr, Binder.ZKBIND);
+		final Annotation ann = AnnotationUtil.getSystemAnnotation(compCtrl,attr);
 		if (ann != null) {
 			final Map<String, String[]> attrs = ann.getAttributes(); //(tag, tagExpr)
 			return AnnotationUtil.testString(attrs.get(Binder.CONVERTER),ann); //system converter if exists
@@ -866,7 +867,7 @@ public class BinderImpl implements Binder,BinderCtrl,Serializable{
 	
 	private String getSystemValidator(Component comp, String attr) {
 		final ComponentCtrl compCtrl = (ComponentCtrl) comp;
-		final Annotation ann = AnnotationUtil.getOverrideAnnotation(compCtrl, attr, Binder.ZKBIND);
+		final Annotation ann = AnnotationUtil.getSystemAnnotation(compCtrl, attr);
 		if (ann != null) {
 			final Map<String, String[]> attrs = ann.getAttributes(); //(tag, tagExpr)
 			return AnnotationUtil.testString(attrs.get(Binder.VALIDATOR),ann); //system validator if exists
@@ -881,7 +882,7 @@ public class BinderImpl implements Binder,BinderCtrl,Serializable{
 		}
 		
 		final ComponentCtrl compCtrl = (ComponentCtrl) comp;
-		final Annotation ann = AnnotationUtil.getOverrideAnnotation(compCtrl, null, Binder.ZKBIND);
+		final Annotation ann = AnnotationUtil.getSystemAnnotation(compCtrl, null);
 		final Map<String, String[]> attrs = ann != null ? ann.getAttributes() : null; //(tag, tagExpr)
 		
 		if (attrs != null) {
@@ -929,7 +930,7 @@ public class BinderImpl implements Binder,BinderCtrl,Serializable{
 		final BindingExecutionInfoCollector collector = getBindingExecutionInfoCollector();
 		//check attribute _accessInfo natural characteristics to register Command event listener
 		final ComponentCtrl compCtrl = (ComponentCtrl) comp;
-		final Annotation ann = AnnotationUtil.getOverrideAnnotation(compCtrl, attr, Binder.ZKBIND);
+		final Annotation ann = AnnotationUtil.getSystemAnnotation(compCtrl, attr);
 		//check which attribute of component should load to component on which event.
 		//the event is usually a engine lifecycle event.
 		//ex, listbox's 'selectedIndex' should be loaded to component on 'onAfterRender'
@@ -1017,7 +1018,7 @@ public class BinderImpl implements Binder,BinderCtrl,Serializable{
 		final BindingExecutionInfoCollector collector = getBindingExecutionInfoCollector();
 		//check attribute _accessInfo natural characteristics to register Command event listener 
 		final ComponentCtrl compCtrl = (ComponentCtrl) comp;
-		final Annotation ann = AnnotationUtil.getOverrideAnnotation(compCtrl, attr, Binder.ZKBIND);
+		final Annotation ann = AnnotationUtil.getSystemAnnotation(compCtrl, attr);
 		//check which attribute of component should fire save on which event.
 		//ex, listbox's 'selectedIndex' should be loaded to component on 'onSelect'
 		//ex, checkbox's 'checked' should be saved to bean on 'onCheck'
@@ -1380,7 +1381,7 @@ public class BinderImpl implements Binder,BinderCtrl,Serializable{
 				if(_log.debugable()){
 					_log.debug("This is a prompt command");
 				}
-				BinderImpl.this.doLoadEvent(comp, evtnm); //load on event
+				BinderImpl.this.doLoadEvent(comp, event); //load on event
 			}
 
 			notifyVMsgsChanged();//always, no better way to know which properties of validation are changed
@@ -1618,12 +1619,12 @@ public class BinderImpl implements Binder,BinderCtrl,Serializable{
 	}
 	
 	//for event -> prompt only, no command
-	private void doLoadEvent(Component comp, String evtnm) {
+	private void doLoadEvent(Component comp, Event evt) {
 		if(_log.debugable()){
-			_log.debug("doLoadEvent comp=[%s],evtnm=[%s]",comp,evtnm);
+			_log.debug("doLoadEvent comp=[%s],evtnm=[%s]",comp,evt.getName());
 		}
-		final BindingKey bkey = getBindingKey(comp, evtnm); 
-		_propertyBindingHandler.doLoadEvent(bkey, comp, evtnm);
+		final BindingKey bkey = getBindingKey(comp, evt.getName()); 
+		_propertyBindingHandler.doLoadEvent(bkey, comp, evt);
 	}
 	
 	//doCommand -> doValidate
@@ -2010,6 +2011,7 @@ public class BinderImpl implements Binder,BinderCtrl,Serializable{
 	}
 	
 	//ZK-1787 When the viewModel tell binder to reload a list, the other component that bind a bean in the list will reload again
+	@SuppressWarnings("unchecked")
 	private TemplateResolver newTemplateResolverImpl(BinderImpl binderImpl, Component comp, String attr,
 			String templateExpr, Map<String, Object> templateArgs) {
 		String clznm = Library.getProperty("org.zkoss.bind.TemplateResolver.class",TemplateResolverImpl.class.getName());
@@ -2041,7 +2043,17 @@ public class BinderImpl implements Binder,BinderCtrl,Serializable{
 
 	public Tracker getTracker() {
 		if (_tracker == null) {
-			_tracker = new TrackerImpl();
+			String clznm = Library.getProperty("org.zkoss.bind.Tracker.class");
+			if(clznm!=null){
+				Class<Tracker> clz;
+				try {
+					clz = (Class<Tracker>)Classes.forNameByThread(clznm);
+					_tracker = clz.newInstance();
+				} catch (Exception e) {
+					throw new UiException("Can't initialize tracker",e);
+				} 
+			}else
+				_tracker = new TrackerImpl();
 		}
 		return _tracker;
 	}

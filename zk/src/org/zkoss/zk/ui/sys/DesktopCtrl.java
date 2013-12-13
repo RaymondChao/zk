@@ -16,6 +16,7 @@ Copyright (C) 2005 Potix Corporation. All Rights Reserved.
 */
 package org.zkoss.zk.ui.sys;
 
+import java.io.Serializable;
 import java.util.Collection;
 import java.util.List;
 
@@ -30,6 +31,7 @@ import org.zkoss.zk.ui.UiException;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.Events;
 import org.zkoss.zk.ui.event.EventListener;
+import org.zkoss.zk.ui.event.impl.DesktopEventQueue;
 import org.zkoss.zk.ui.util.EventInterceptor;
 import org.zkoss.zk.au.AuRequest;
 import org.zkoss.zk.au.AuResponse;
@@ -438,6 +440,18 @@ if (c.isEmpty()) {
 	 */
 	public void deactivateServerPush();
 
+	
+	/**
+	 * Enable/Disable serverpush using reference counting, so that multiple enablers can 
+	 * use the same serverpush and deregister whenever they want.
+	 * @param enable true/false enable/disable serverpush
+	 * @param enabler the same reference must be used to disable again
+	 * @return Currently only used by {@link DesktopEventQueue} to enable several
+	 * eventqueues to use the same {@link ServerPush} 
+	 * @since 6.5.4
+	 */
+	public boolean enableServerPush(boolean enable, Serializable enabler);
+	
 	/** Processes an AU request.
 	 * Notice that not only the requests for a desktop but also the requests
 	 * for any component in the desktop will go thru this method.

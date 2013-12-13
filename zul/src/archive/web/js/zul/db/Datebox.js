@@ -302,7 +302,6 @@ zul.db.Datebox = zk.$extends(zul.inp.FormatWidget, {
 			this.getInputNode().style.width = '';
 		this.syncWidth();
 	},
-
 	getZclass: function () {
 		var zcs = this._zclass;
 		return zcs != null ? zcs: "z-datebox" + (this.inRoundedMold() ? "-rounded": "");
@@ -433,7 +432,7 @@ zul.db.Datebox = zk.$extends(zul.inp.FormatWidget, {
 
 			//FF: if we eat UP/DN, Alt+UP degenerate to Alt (select menubar)
 			var opts = {propagation:true};
-			if (zk.ie) opts.dom = true;
+			if (zk.ie < 11) opts.dom = true;
 			evt.stop(opts);
 			return;
 		}
@@ -576,17 +575,22 @@ zul.db.CalendarPop = zk.$extends(zul.db.Calendar, {
 	setLocalizedSymbols: function (symbols) {
 		this._localizedSymbols = symbols;
 	},
+	// ZK-2047: should sync shadow when shiftView
 	rerender: function () {
 		this.$supers('rerender', arguments);
 		if (this.desktop) this.syncShadow();
 	},
+	
 	close: function (silent) {
 		var db = this.parent,
 			pp = db.$n("pp");
 
 		if (!pp || !zk(pp).isVisible()) return;
-		if (this._shadow) this._shadow.hide();
-
+		if (this._shadow) {
+			// B65-ZK-1904: Make shadow behavior the same as ComboWidget
+			this._shadow.destroy();
+			this._shadow = null;
+		}
 		var zcls = db.getZclass();
 		pp.style.display = "none";
 		pp.className = zcls + "-pp";
@@ -650,8 +654,10 @@ zul.db.CalendarPop = zk.$extends(zul.db.Calendar, {
 		zk(pp).position(inp, "after_start");
 		delete db._shortcut;
 		
+		var self = this;
 		setTimeout(function() {
 			_reposition(db, silent);
+			zWatch.fireDown('onVParent', self.parent.$n('pp'), { shadow: self._shadow });
 		}, 150);
 		//IE, Opera, and Safari issue: we have to re-position again because some dimensions
 		//in Chinese language might not be correct here.
