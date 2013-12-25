@@ -89,7 +89,12 @@ zjq = function (jq) { //ZK extension
 				top = ioft[1] - ooft[1] +
 						(outer == (zk.safari ? document.body : document.body.parentNode)
 								? 0 : outer.scrollTop),
+				left = ioft[0] - ooft[0] +
+						(outer == (zk.safari ? document.body : document.body.parentNode)
+								? 0 : outer.scrollLeft),
 				ih = info ? info.h : inner.offsetHeight,
+				iw = info ? info.w : inner.offsetWidth,
+				right = left + iw,
 				bottom = top + ih,
 				updated;
 			//for fix the listbox(livedate) keydown select always at top
@@ -100,16 +105,27 @@ zjq = function (jq) { //ZK extension
 				outer.scrollTop = !info ? bottom : bottom - (outer.clientHeight + (inner.parentNode == outer ? 0 : outer.scrollTop));
 				updated = true;
 			}
+			
+			// ZK-1924:	scrollIntoView can also adjust horizontal scroll position
+			if (outer.scrollLeft > left) {
+				outer.scrollLeft = left;
+				updated = true;
+			} else if (right > outer.clientWidth + outer.scrollLeft) {
+				outer.scrollLeft = !info ? right : right - (outer.clientWidth + (inner.parentNode == outer ? 0 : outer.scrollLeft));
+				updated = true;
+			}
+			
 			if (updated || !info) {
 				if (!info)
 					info = {
 						oft: ioft,
 						h: inner.offsetHeight,
+						w: inner.offsetWidth,
 						el: inner
 					};
 				else info.oft = zk(info.el).revisedOffset();
 			}
-			outer.scrollTop = outer.scrollTop;
+			
 			return info; 
 		}
 	}
@@ -202,8 +218,11 @@ zjq = function (jq) { //ZK extension
 
 zk.copy(zjq, {
 	//Returns the minimal width to hold the given cell called by getChildMinSize_
-	minWidth: function (el) {
+	minWidth: (!zk.ie11_) ? function (el) {
 		return zk(el).offsetWidth();
+	}: function (el) {
+		// B65-ZK-1526: IE11 required an extra pixel as IE9/IE10
+		return zk(el).offsetWidth() + 1;
 	},
 
 	fixInput: zk.$void, //overriden in dom.js to fix the focus issue (losing caret...)
@@ -600,11 +619,11 @@ zjq.prototype = {
 				te, le;
 			do {
 				if (!te) {
-					if (el.style.overflow == 'auto' || el.style.overflowY == 'auto')
+					if (el == document.body || el.style.overflow == 'auto' || el.style.overflowY == 'auto')
 						te = el;
 				}
 				if (!le) {
-					if (el.style.overflow == 'auto' || el.style.overflowX == 'auto')
+					if (el == document.body || el.style.overflow == 'auto' || el.style.overflowX == 'auto')
 						le = el;
 				}
 				if (te && le)
@@ -721,7 +740,7 @@ jq(el).zk.sumStyles("lr", jq.paddings);
 		if(!ofs) {
 			if (el.getBoundingClientRect){ // IE and FF3
 				var elst, oldvisi;
-				if (zk.ie && el.style.display == "none") {
+				if (zk.ie < 11 && el.style.display == "none") {
 				//When popup a window in an iframe, getBoundingClientRect not correct (test case: B36-2851102.zul within iframe)
 					oldvisi = (elst = el.style).visibility;
 					elst.visibility = "hidden";
@@ -735,6 +754,10 @@ jq(el).zk.sumStyles("lr", jq.paddings);
 				if (elst) {
 					elst.display = "none";
 					elst.visibility = oldvisi;
+				}
+				if (zk.ie11_) {// fix ie11 float number issue for ZTL B50-3298164
+					b[0] = Math.ceil(b[0]);
+					b[1] = Math.ceil(b[1]);
 				}
 				return b;
 				// IE adds the HTML element's border, by default it is medium which is 2px
@@ -869,7 +892,7 @@ jq(el).zk.sumStyles("lr", jq.paddings);
 	toStyleOffset: function (x, y) {
 		var el = this.jq[0],
 			oldx = el.style.left, oldy = el.style.top,
-			resetFirst = zk.opera || zk.air || zk.ie8;
+			resetFirst = zk.opera || zk.air || zk.ie > 7; // don't use zk.ie8 which is not including ie 11
 		//Opera:
 		//1)we have to reset left/top. Or, the second call position wrong
 		//test case: Tooltips and Popups
@@ -1458,15 +1481,16 @@ jq(el).zk.center(); //same as 'center'
 				} else
 					p.appendChild(el);
 				
-				var cf, p;
+				var cf, p, a;
 				// ZK-851
 				if ((zk.ff || zk.opera) && (cf = zk._prevFocus) && 
 					(p = zk.Widget.$(el)) && zUtl.isAncestor(p, cf)) { 
 					if (cf.getInputNode)
 						jq(cf.getInputNode()).trigger('blur');
-					
-					// ZK-1324: Trendy button inside bandbox popup doesn't lose focus when popup is closed
-					if (cf.$instanceof(zul.wgt.Button))
+					else if ((a = cf.$n('a')) // ZK-1955
+							&& jq.nodeName(a, 'button', 'input', 'textarea', 'a', 'select', 'iframe'))
+						jq(a).trigger('blur');
+					else if (cf.$instanceof(zul.wgt.Button)) // ZK-1324: Trendy button inside bandbox popup doesn't lose focus when popup is closed
 						jq(cf.$n('btn') || cf.$n()).trigger('blur');
 				}
 			}
@@ -1628,7 +1652,7 @@ jq(el).css(jq.parseStyle(jq.filterTextStle('width:100px;font-size:10pt')));
 		var st = this.jq[0];
 		if (st && (st=st.style))
 			for (var nm in st)
-				if ((!zk.ie || nm != "accelerator")
+				if ((!(zk.ie < 11) || nm != "accelerator")
 				&& st[nm] && typeof st[nm] == "string")
 					try {
 						st[nm] = "";
@@ -2152,7 +2176,7 @@ this._syncShadow(); //synchronize shadow
 	 * because it has no effect for browsers other than IE.
 	 * @since 5.0.1
 	 */
-	focusOut: zk.ie ? function () {
+	focusOut: (zk.ie < 11) ? function () {
 		window.focus();
 	}: function () {
 		var a = jq('#z_focusOut')[0];

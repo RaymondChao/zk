@@ -401,7 +401,7 @@ zul.layout.LayoutRegion = zk.$extends(zul.Widget, {
 					hgh = cave && this._vflex != 'min' ? (cave.offsetHeight + cave.offsetTop) : zk(n).revisedHeight(sz.height, true);
 				if (cap) // B50-ZK-236: add header height
 					hgh +=  cap.offsetHeight;
-				if (zk.ie) n.style.height = '';
+				if (zk.ie < 11) n.style.height = '';
 				n.style.height = jq.px0(hgh);
 			}
 		}
@@ -412,7 +412,7 @@ zul.layout.LayoutRegion = zk.$extends(zul.Widget, {
 				n.style.width = this._width ? this._width : '';
 			else {
 				var wdh = zk(n).revisedWidth(sz.width, true);
-				if (zk.ie) n.style.width = '';
+				if (zk.ie < 11) n.style.width = '';
 				n.style.width = jq.px0(wdh);
 			}
 		}
@@ -777,7 +777,7 @@ zul.layout.LayoutRegion = zk.$extends(zul.Widget, {
 						Math.floor(pn.offsetHeight * zk.parseInt(h.substring(0, pert)) / 100),
 						0) : this.$n('real').offsetHeight
 			};
-			if (zk.ie == 9 && (region == 'west' || region == 'east') && !this._width && !this._hflex)
+			if (zk.ie > 8 && (region == 'west' || region == 'east') && !this._width && !this._hflex)
 				ambit.w++; // B50-ZK-641: text wrap in IE
 		}
 		var split = ignoreSplit ? {offsetHeight:0, offsetWidth:0}: this.$n('split') || {offsetHeight:0, offsetWidth:0};

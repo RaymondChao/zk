@@ -151,16 +151,27 @@ zul.box.Layout = zk.$extends(zk.Widget, {
 		if (!zk.mounting) { // ignore for the loading time
 			for (var kid = this.firstChild; kid; kid = kid.nextSibling) {
 				var chdex = kid.$n('chdex');
-				//ZK-1679: clear height only vflex != min, clear width only hflex != min
-				if (vert && kid._nvflex && kid.getVflex() != 'min') {
-					kid.setFlexSize_({height:'', width:''});
-					if (chdex)
-						chdex.style.height = '';
-				}
-				if (!vert && kid._nhflex && kid.getHflex() != 'min') {
-					kid.setFlexSize_({height:'', width:''});
-					if (chdex)
-						chdex.style.width = '';
+				// ZK-1861: Js error when flex + visible = false
+				if (chdex) {
+					//ZK-1679: clear height only vflex != min, clear width only hflex != min
+					if (vert && kid._nvflex && kid.getVflex() != 'min') {
+						var n;
+						if ((n = kid.$n()) && (n.scrollTop || n.scrollLeft)) // keep the scroll status
+							;// do nothing Bug ZK-1885: scrollable div (with vflex) and tooltip
+						else
+							kid.setFlexSize_({height:'', width:''});
+						if (chdex)
+							chdex.style.height = '';
+					}
+					if (!vert && kid._nhflex && kid.getHflex() != 'min') {
+						var n;
+						if ((n = kid.$n()) && (n.scrollTop || n.scrollLeft)) // keep the scroll status
+							;// do nothing Bug ZK-1885: scrollable div (with vflex) and tooltip
+						else
+							kid.setFlexSize_({height:'', width:''});
+						if (chdex)
+							chdex.style.width = '';
+					}
 				}
 			}
 		}
@@ -319,7 +330,7 @@ zul.box.Layout = zk.$extends(zk.Widget, {
 			var cwgt = vflexs.shift(), 
 				vsz = (vert ? (cwgt._nvflex * hgh / vflexsz) : hgh) | 0, //cast to integer
 				offtop = cwgt.$n().offsetTop,
-				isz = vsz - ((zk.ie && offtop > 0) ? (offtop * 2)
+				isz = vsz - ((zk.ie < 11 && offtop > 0) ? (offtop * 2)
 							: /* B50-3236331.zul */(zk.ie < 8 ? 1 : 0));
 			 
 			cwgt.setFlexSize_({height:isz});
@@ -333,7 +344,7 @@ zul.box.Layout = zk.$extends(zk.Widget, {
 		if (vflexs.length) {
 			var cwgt = vflexs.shift(),
 				offtop = cwgt.$n().offsetTop,
-				isz = lastsz - ((zk.ie && offtop > 0) ? (offtop * 2)
+				isz = lastsz - ((zk.ie < 11 && offtop > 0) ? (offtop * 2)
 							: /* B50-3236331.zul */(zk.ie < 8 ? 1 : 0));
 			cwgt.setFlexSize_({height:isz});
 			cwgt._vflexsz = lastsz;
@@ -402,7 +413,7 @@ zul.box.Layout = zk.$extends(zk.Widget, {
     			}
 				
 				// IE9+ bug ZK-483
-				if (zk.ie9 && this._hflexsz)
+				if ((zk.ie > 8) && this._hflexsz)
 					total = Math.max(this._hflexsz, total);
 					
     			n.style.width = jq.px0(total);
@@ -413,6 +424,11 @@ zul.box.Layout = zk.$extends(zk.Widget, {
     				if (wd > max)
     					max = wd;
     			}
+    			
+    			// IE9+ bug ZK-483
+				if ((zk.ie > 8)&& this._hflexsz)
+					max = Math.max(this._hflexsz, max);
+				
     			n.style.width = jq.px0(max);
 			}
 		}

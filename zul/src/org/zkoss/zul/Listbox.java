@@ -35,6 +35,7 @@ import java.util.Set;
 import java.util.Comparator;
 
 import static org.zkoss.lang.Generics.cast;
+
 import org.zkoss.lang.Classes;
 import org.zkoss.lang.Exceptions;
 import org.zkoss.lang.Library;
@@ -50,6 +51,7 @@ import org.zkoss.zk.ui.Executions;
 import org.zkoss.zk.ui.Page;
 import org.zkoss.zk.ui.UiException;
 import org.zkoss.zk.ui.WrongValueException;
+import org.zkoss.zk.ui.event.CheckEvent;
 import org.zkoss.zk.ui.event.CloneableEventListener;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
@@ -84,6 +86,7 @@ import org.zkoss.zul.impl.XulElement;
  * <li>{@link org.zkoss.zk.ui.event.SelectEvent} is sent when user changes the
  * selection.</li>
  * <li>onAfterRender is sent when the model's data has been rendered.(since 5.0.4)</li>
+ * <li>onCheckSelectAll is sent when user click on selectAll checkbox.(since 6.5.5)</li>
  * </ol>
  *
  * <p>
@@ -349,6 +352,8 @@ public class Listbox extends MeshElement {
 		
 		// since 6.0.0/5.0.11, B50-ZK-798
 		addClientEvent(Listbox.class, "onAnchorPos", CE_DUPLICATE_IGNORE | CE_IMPORTANT);
+		// since 6.5.5 F65-ZK-2014
+		addClientEvent(Listbox.class, "onCheckSelectAll", CE_DUPLICATE_IGNORE | CE_IMPORTANT);
 	}
 
 	public Listbox() {
@@ -398,6 +403,13 @@ public class Listbox extends MeshElement {
 			public void clear() {
 				final boolean oldFlag = setReplacingItem(true);
 				try {
+					//Bug ZK-1834: if there are selected items, clear first.
+					if (getSelectedCount() > 0) {
+						clearSelection();
+						
+						// Bug ZK-1842 Listbox scroll bug listheader sort 
+						_anchorLeft = _anchorTop = 0;
+					}
 					super.clear();
 				} finally {
 					setReplacingItem(oldFlag);
@@ -1621,11 +1633,13 @@ public class Listbox extends MeshElement {
 					if (_jsel < 0) {
 						_jsel = newIndex;
 						_selItems.add(newItem);
+						smartUpdateSelection();
 					} else if (_multiple) {
 						if (_jsel > newIndex) {
 							_jsel = newIndex;
 						}
 						_selItems.add(newItem);
+						smartUpdateSelection();
 					} else { // deselect
 						newItem.setSelectedDirectly(false);
 					}
@@ -1767,6 +1781,8 @@ public class Listbox extends MeshElement {
 				if (_jsel == index) {
 					fixSelectedIndex(index);
 				}
+
+				smartUpdateSelection();
 			} else {
 				if (!isLoadingModel() && _jsel >= index) {
 					--_jsel;
@@ -2570,6 +2586,9 @@ public class Listbox extends MeshElement {
 					}
 				}
 			}
+			if (_model.getSize() == 0) { // Bug ZK-1834: model is empty
+				resetDataLoader(true);
+			}
 		}
 	}
 	/** Called when SELECTION_CHANGED is received. */
@@ -2986,6 +3005,10 @@ public class Listbox extends MeshElement {
 					} else {
 						resetDataLoader(); // enforce recreate the dataloader
 						// dataloader
+
+						// Bug ZK-1895
+						//The attribute shall be removed, otherwise DataLoader will not syncModel when setModel
+						Executions.getCurrent().removeAttribute("zkoss.Listbox.deferInitModel_"+getUuid());
 					}
 				}
 			} else if (_model != null){ //items in model not init yet
@@ -3505,7 +3528,9 @@ public class Listbox extends MeshElement {
 			final int tsz = getItemCount();
 			final int toUI = Math.min(to, tsz - 1); // capped by size
 			if (!isMultiple() || shift == 0) {
-				if (index >= tsz)
+				
+				// B65-ZK-1969 and B65-1715
+				if ((_model == null && index >= tsz) || (_model != null && index >= _model.getSize()))
 					index = tsz - 1;
 				setSelectedIndex(index);
 				setFocusIndex(offset < 0 ? pageSize - 1 : offset);
@@ -3542,7 +3567,9 @@ public class Listbox extends MeshElement {
 					"onSelect", this, getSelectedItems(), 
 					getItemAtIndex(index), shift != 0 ? SelectEvent.SHIFT_KEY : 0);
 			Events.postEvent(evt);
-			
+		} else if (cmd.equals("onCheckSelectAll")) { // F65-ZK-2014
+			CheckEvent evt = CheckEvent.getCheckEvent(request);
+			Events.postEvent(evt);
 		} else
 			super.service(request, everError);
 	}

@@ -149,7 +149,7 @@ zul.mesh.Frozen = zk.$extends(zul.Widget, {
 			};
 			
 		if (p = this.parent) {
-			if (zk.ie)
+			if (zk.ie < 11)
 				setTimeout(fn, 0);
 			else fn();
 		}
@@ -275,7 +275,11 @@ zul.mesh.Frozen = zk.$extends(zul.Widget, {
 							var tBodies = eFootTbl.tBodies;
 							
 							if (tBodies) {
-								tBodies[tBodies.length - 1].rows[0].cells[index].style.width = cellWidth;
+								var row = tBodies[tBodies.length - 1].rows[0];
+								
+								// Bug ZK-1914, ignore if footer contains spans or cells size not matched.
+								if (row.cells.length > index)
+									row.cells[index].style.width = cellWidth;
 							}
 						}
 					}

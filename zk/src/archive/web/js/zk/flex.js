@@ -23,7 +23,7 @@ it will be useful, but WITHOUT ANY WARRANTY.
 			ps = $prev[0].style;
 			// ZK-700
 			// ignore prev if not displayed
-			if (ps.display == 'none')
+			if (jq($prev[0]).css('display') == 'none') // B65-ZK-1925, B65-ZK-1932: Use jQuery's .css() function to determine the property
 				ignorePrev = true;
 			else {
 				zs = $zkc[0].style;
@@ -54,7 +54,7 @@ it will be useful, but WITHOUT ANY WARRANTY.
 				ps.marginRight = oldVal[3];
 			}
 		}
-		return !zk.ie ? Math.max(0, start) : start; // ie may have a wrong gap
+		return !(zk.ie < 11) ? Math.max(0, start) : start; // ie may have a wrong gap
 		
 	}
 	
@@ -68,7 +68,7 @@ it will be useful, but WITHOUT ANY WARRANTY.
 			ps = $prev[0].style;
 			// ZK-700
 			// ignore prev if not displayed
-			if (ps.display == 'none')
+			if (jq($prev[0]).css('display') == 'none')  // B65-ZK-1925, B65-ZK-1932: Use jQuery's .css() function to determine the property	
 				ignorePrev = true;
 			else {
 				zs = $zkc[0].style;
@@ -102,7 +102,7 @@ it will be useful, but WITHOUT ANY WARRANTY.
 				ps.marginBottom = oldVal[3];
 			}
 		}
-		return !zk.ie ? Math.max(0, start) : start; // ie may have a wrong gap
+		return !(zk.ie < 11) ? Math.max(0, start) : start; // ie may have a wrong gap
 	}
 	
 	// check whether the two elements are the same baseline, if so, we need to
@@ -426,8 +426,11 @@ zFlex = { //static methods
 				if (pretxt) {
 					if (!zkpOffset)
 						zkpOffset = zkp.cmOffset();
-					wdh -= _getTextWidth(zkc, zkp, zkpOffset);
-					hgh -= _getTextHeight(zkc, zkp, zkpOffset);
+					if (!cwgt || !cwgt.isExcludedHflex_()) // fixed ZK-1706 sideeffect for B60-ZK-917.zul
+						wdh -= _getTextWidth(zkc, zkp, zkpOffset);
+
+					if (!cwgt || !cwgt.isExcludedVflex_()) // fixed ZK-1706 sideeffect for B60-ZK-917.zul
+						hgh -= _getTextHeight(zkc, zkp, zkpOffset);
 				}
 				//horizontal size
 				if (cwgt && cwgt._nhflex) {
@@ -439,7 +442,10 @@ zFlex = { //static methods
 						hflexs.push(cwgt);
 						hflexsz += cwgt._nhflex;
 					}
-				} else if (!cwgt || !cwgt.isExcludedHflex_()) {
+				} else if ((!cwgt &&
+						// panelchild cannot include panel's bottombar.
+						(!zk.isLoaded('zul.wnd') || !wgt.$instanceof(zul.wnd.Panelchildren))) 
+						|| (cwgt && !cwgt.isExcludedHflex_())) {
 					wdh -= offwdh;
 					wdh -= zkc.sumStyles("lr", jq.margins);
     			}

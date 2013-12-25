@@ -282,7 +282,7 @@ public class ClassWebResource {
 		if (ext == null)
 			return null;
 
-		ext = ext.toLowerCase();
+		ext = ext.toLowerCase(java.util.Locale.ENGLISH);
 		for (;;) {
 			synchronized (_extlets) {
 				Extendlet exlet = _extlets.get(ext);
@@ -333,7 +333,7 @@ public class ClassWebResource {
 			}
 		});
 
-		ext = ext.toLowerCase();
+		ext = ext.toLowerCase(java.util.Locale.ENGLISH);
 		synchronized (_extlets) {
 			return _extlets.put(ext, extlet);
 		}
@@ -350,7 +350,7 @@ public class ClassWebResource {
 		if (ext == null)
 			return null;
 
-		ext = ext.toLowerCase();
+		ext = ext.toLowerCase(java.util.Locale.ENGLISH);
 		synchronized (_extlets) {
 			return _extlets.remove(ext);
 		}
@@ -374,7 +374,7 @@ public class ClassWebResource {
 		if (ext == null)
 			return null;
 
-		ext = ext.toLowerCase();
+		ext = ext.toLowerCase(java.util.Locale.ENGLISH);
 		final Map<String, FastReadArray<Filter>> filters =
 			flag == 0 || (flag & FILTER_REQUEST) != 0 ? _reqfilters: _incfilters;
 		if (filters.isEmpty()) //no need to sync
@@ -417,7 +417,7 @@ public class ClassWebResource {
 			}
 		});
 
-		ext = ext.toLowerCase();
+		ext = ext.toLowerCase(java.util.Locale.ENGLISH);
 		if (flags == 0 || (flags & FILTER_REQUEST) != 0)
 			addFilter(_reqfilters, ext, filter);
 		if ((flags & FILTER_INCLUDE) != 0)
@@ -443,7 +443,7 @@ public class ClassWebResource {
 		if (ext == null || filter == null)
 			return false;
 
-		ext = ext.toLowerCase();
+		ext = ext.toLowerCase(java.util.Locale.ENGLISH);
 		boolean removed = false;
 		if (flags == 0 || (flags & FILTER_REQUEST) != 0)
 			removed = rmFilter(_reqfilters, ext, filter);
@@ -630,7 +630,8 @@ public class ClassWebResource {
 			if ("js".equals(ext)) {
 				//Don't sendError. Reason: 1) IE waits and no onerror fired
 				//2) better to debug (user will tell us what went wrong)
-				data = ("(window.zk&&zk.error?zk.error:alert)('"+pi+" not found');").getBytes("UTF-8");
+				// B65-ZK-1897 Sanitizing pi to prevent possible cross-site scripting vulnerability 
+				data = ("(window.zk&&zk.error?zk.error:alert)('"+ XMLs.encodeText(pi) +" not found');").getBytes("UTF-8");
 					//FUTURE: zweb shall not depend on zk
 			} else {
 				if (Servlets.isIncluded(request)) log.error("Resource not found: "+pi);
@@ -757,6 +758,8 @@ public class ClassWebResource {
 			//prefix context path
 			if (request instanceof HttpServletRequest) {
 				String ctxpath = ((HttpServletRequest)request).getContextPath();
+				if (ctxpath == null)
+					throw new NullPointerException("HttpServletRequest#getContentPath() returns a null value from [ " + request + " ]");
 				final int ctxlen = ctxpath.length();
 				if (ctxlen > 0) {
 					final char cc = ctxpath.charAt(0);

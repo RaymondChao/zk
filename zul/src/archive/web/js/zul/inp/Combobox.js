@@ -62,7 +62,7 @@ zul.inp.Combobox = zk.$extends(zul.inp.ComboWidget, {
 				n.value = this.valueEnter_ != null ? this.valueEnter_ : this._value || '';
 				
 				// Fixed bug 2944355
-				if (zk.ie && n.value) {
+				if (zk.ie < 11 && n.value) {
 					ofs = n.value.length;
 					ofs = [ofs, ofs];
 				}
@@ -85,6 +85,10 @@ zul.inp.Combobox = zk.$extends(zul.inp.ComboWidget, {
 		if (this._shallRedoCss) { //fix in case
 			zk(this.getPopupNode_()).redoCSS(-1);
 			this._shallRedoCss = null;
+		}
+		// B65-ZK-1990: Fix position of popup when it appears above the input, aligned to the left
+		if (this.isOpen() && this._shallSyncPopupPosition) {
+			zk(this.getPopupNode_()).position(this.getInputNode(), 'before_start');
 		}
 	},
 	setValue: function (val) {

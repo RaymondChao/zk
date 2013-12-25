@@ -37,7 +37,7 @@ it will be useful, but WITHOUT ANY WARRANTY.
 		var wgtn = wgt.$n(),
 			ws = wgtn ? wgtn.style.whiteSpace : ""; //bug#3106514: sizedByContent with not visible columns
 		if (wgtn) {
-			if (zk.ie8_ || zk.ie9)
+			if (zk.ie8)
 				wgt._wsbak = ws; // B50-ZK-432
 			if (zk.ie < 8)
 				jq(wgtn).addClass('z-word-nowrap'); // B50-ZK-333
@@ -133,9 +133,9 @@ it will be useful, but WITHOUT ANY WARRANTY.
 				if (zk.ie < 8 && max < wd) {
 					max = wd;
 					maxj = i;
-				} else if (zk.ff > 4 || zk.ie >= 9) {// firefox4 & IE9 & IE10 still cause break line in case B50-3147926 column 1
+				} else if (zk.ff > 4 || zk.ie > 8) // firefox4 & IE9, 10, 11 still cause break line in case B50-3147926 column 1
 					++wds[i];
-				}
+				
 				if (zk.ie < 8) // B50-ZK-206
 					wds[i] += 2;
 				width += wds[i]; // using wds[i] instead of wd for B50-3183172.zul
@@ -153,7 +153,7 @@ it will be useful, but WITHOUT ANY WARRANTY.
 					if (zk.ie < 8 && max < wd) {
 						max = wd;
 						maxj = i;
-					} else if (zk.ff > 4 || zk.ie >= 9) // firefox4 & IE9 & IE10 still cause break line in case B50-3147926 column 1
+					} else if (zk.ff > 4 || zk.ie > 8) // firefox4 & IE9 & IE10 still cause break line in case B50-3147926 column 1
 						++wds[i];
 					if (zk.ie < 8) // B50-ZK-206
 						wds[i] += 2;
@@ -191,7 +191,7 @@ it will be useful, but WITHOUT ANY WARRANTY.
 		if (wgtn) {
 			if (zk.ie < 8)
 				jq(wgtn).removeClass('z-word-nowrap'); // B50-ZK-333
-			else if (!(zk.ie8_ || zk.ie9)) // B50-ZK-432: restore later for IE 8
+			else if (!(zk.ie8)) // B50-ZK-432: restore later for IE 8
 				wgtn.style.whiteSpace = ws;
 		}
 		return {width: width, wds: wds};
@@ -636,8 +636,10 @@ zul.mesh.MeshWidget = zk.$extends(zul.Widget, {
 		if (this._hflex != 'min')
 			this._fixHeaders();
 		// Bug ZK-1284: Scrolling on grid/listbox header could cause column heading/body to misalign 
-		if ((zk.chrome || zk.ie || zk.safari) && this.ehead)
+		// B65-ZK-1793: Should check if ehdheaders is visible or not
+		if (this.head && this.ehdheaders && zk(this.ehdheaders).isVisible()) {
 			this.domListen_(this.ehead, 'onScroll');
+		}
 		if (this.ebody) {
 			this.domListen_(this.ebody, 'onScroll');
 			this.ebody.style.overflow = ''; // clear
@@ -651,7 +653,8 @@ zul.mesh.MeshWidget = zk.$extends(zul.Widget, {
 	},
 	unbind_: function () {
 		// Bug ZK-1284: Scrolling on grid/listbox header could cause column heading/body to misalign
-		if ((zk.chrome || zk.ie || zk.safari) && this.ehead)
+		// B65-ZK-1793: Should check if ehdheaders is visible or not
+		if (this.head && this.ehdheaders && zk(this.ehdheaders).isVisible())
 			this.domUnlisten_(this.ehead, 'onScroll');
 		
 		if (this.ebody)
@@ -664,7 +667,7 @@ zul.mesh.MeshWidget = zk.$extends(zul.Widget, {
 	clearCache: function () {
 		this.$supers('clearCache', arguments);
 		this.ebody = this.ehead = this.efoot = this.efrozen = this.ebodytbl
-			= this.eheadtbl = this.efoottbl = this.ebodyrows
+			= this.eheadtbl = this.efoottbl = this.ebodyrows = this.ehdheaders
 			= this.ehdfaker = this.ebdfaker = null;
 	},
 
@@ -799,6 +802,7 @@ zul.mesh.MeshWidget = zk.$extends(zul.Widget, {
 		}
 		if (this.ehead) {
 			this.ehdfaker = this.eheadtbl.tBodies[0].rows[0];
+			this.ehdheaders = this.eheadtbl.tBodies[1].rows[0];
 			this.ebdfaker = this.ebodytbl.tBodies[0].rows[0];
 			if (this.efoottbl)
 				this.eftfaker = this.efoottbl.tBodies[0].rows[0];
@@ -845,11 +849,14 @@ zul.mesh.MeshWidget = zk.$extends(zul.Widget, {
 			return;
 		
 		var ehead = this.ehead,
+			ehdheaders = this.ehdheaders,
 			ebody = this.ebody,
 			efoot = this.efoot;
 		
+		
 		// Bug ZK-1284: Scrolling on grid/listbox header could cause column heading/body to misalign
-		if ((zk.chrome || zk.ie || zk.safari) && ehead && zk(ehead).isVisible() && //Bug ZK-1649: should check if ehead is visible or not
+		// B65-ZK-1793: Should check if ehdheaders is visible or not
+		if (ehead && zk(ehead).isVisible() && ehdheaders && zk(ehdheaders).isVisible() && //Bug ZK-1649: should check if ehead is visible or not
 				!(this.fire('onScroll', ehead.scrollLeft).stopped)) {
 			if (this._currentLeft != ehead.scrollLeft) {
 				if (ebody)
@@ -857,6 +864,7 @@ zul.mesh.MeshWidget = zk.$extends(zul.Widget, {
 				if (efoot) 
 					efoot.scrollLeft = ehead.scrollLeft;
 			}
+			
 		}
 		
 		if (!(this.fire('onScroll', ebody.scrollLeft).stopped)) {
@@ -881,9 +889,9 @@ zul.mesh.MeshWidget = zk.$extends(zul.Widget, {
 		var t = zul.mesh.Scrollbar.getScrollPosV(this),
 			l = ebody.scrollLeft,
 			scrolled = (t != this._currentTop || l != this._currentLeft);
-		if (scrolled && 
-				// Bug ZK-353 ignore in rod
-				!this._listbox$rod && !this._grid$rod) {
+		
+		// ZK-2046: should sync currentTop in rod mode see also Bug ZK-353
+		if (scrolled /* && !this._listbox$rod && !this._grid$rod*/) {
 			this._currentTop = t; 
 		}
 		
@@ -930,7 +938,7 @@ zul.mesh.MeshWidget = zk.$extends(zul.Widget, {
 			if (_fixPageSize(this, rows))
 				return; //need to reload with new page size
 		
-		if ((zk.ie8_ || zk.ie9) && (this._wsbak !== undefined)) { // B50-ZK-432
+		if ((zk.ie8) && (this._wsbak !== undefined)) { // B50-ZK-432
 			this.$n().style.whiteSpace = this._wsbak;
 			delete this._wsbak;
 		}
@@ -1113,7 +1121,7 @@ zul.mesh.MeshWidget = zk.$extends(zul.Widget, {
 			var h = this._vflexSize(hgh); 
 			if (h < 0) h = 0;
 
-			if (!zk.ie || zk.ie8 || this._vflex != "min")
+			if (!(zk.ie < 11) || zk.ie8 || this._vflex != "min")
 				ebodyStyle.height = h + "px";
 			//2007/12/20 We don't need to invoke the body.offsetHeight to avoid a performance issue for FF. 
 			if (zk.ie && ebody.offsetHeight) // bug #1812001.
@@ -1130,9 +1138,9 @@ zul.mesh.MeshWidget = zk.$extends(zul.Widget, {
 			if (hgh && hgh.indexOf('%') > 0) {
 				var h = this._vflexSize(n.offsetHeight + 'px'); 
 				if (h < 0) h = 0;
-				if (!zk.ie || zk.ie8 || this._vflex != "min")
+				if (!(zk.ie < 11) || zk.ie8 || this._vflex != "min")
 					ebodyStyle.height = h + "px";
-				if (zk.ie && ebody.offsetHeight) // bug #1812001
+				if ((zk.ie < 11) && ebody.offsetHeight) // bug #1812001
 					;
 			}
 		}
@@ -1175,7 +1183,7 @@ zul.mesh.MeshWidget = zk.$extends(zul.Widget, {
 		var tblwd = this._getEbodyWd(),
 			hgh = this.getHeight() || n.style.height, // bug in B36-2841185.zul
 			sizedByContent = this.isSizedByContent();
-		if (zk.ie) {//By experimental: see zk-blog.txt
+		if (zk.ie < 11) {//By experimental: see zk-blog.txt
 			if (this.eheadtbl && this.eheadtbl.offsetWidth != this.ebodytbl.offsetWidth) 
 				this.ebodytbl.style.width = ""; //reset
 				 
@@ -1267,7 +1275,7 @@ zul.mesh.MeshWidget = zk.$extends(zul.Widget, {
 				
 		}
 	} : zk.$void,
-	_removeScrollbar: zk.ie ? function() { //see HeadWidget#afterChildrenFlex_
+	_removeScrollbar: zk.ie < 11 ? function() { //see HeadWidget#afterChildrenFlex_
 		if (this._vflex) return;
 		
 		var hgh = this.getHeight() || this.$n().style.height || (this.getRows && this.getRows()); // bug in B36-2841185.zul
@@ -1450,7 +1458,7 @@ zul.mesh.MeshWidget = zk.$extends(zul.Widget, {
 		}
 		//ie6/ie7 leave a vertical scrollbar space, use offsetWidth if not setting height
 		// B50-ZK-1038: in IE, when body has 0 height, it has 0 client width
-		var useOffset = zk.ie && (bdtable.parentNode.offsetHeight == 0 || 
+		var useOffset = zk.ie < 11 && (bdtable.parentNode.offsetHeight == 0 || 
 			(zk.ie < 8 && !this.getHeight() && !this.$n().style.height));
 		//Tricky. ie6/ie7 strange behavior, will generate horizontal scrollbar, minus one to avoid it!
 		var	total = bdtable.parentNode[useOffset ? 'offsetWidth' : 'clientWidth'] - (zk.ie < 8 ? 1 : 0), 

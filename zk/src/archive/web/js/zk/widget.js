@@ -139,8 +139,12 @@ it will be useful, but WITHOUT ANY WARRANTY.
 		if (!nest || wgt.z_rod === 9) { //Bug 2948829: don't delete value set by real ROD
 			delete wgt.z_rod;
 
-			for (var child = wgt.firstChild; child; child = child.nextSibling)
+			for (var child = wgt.firstChild; child; child = child.nextSibling) {
 				_unbindrod(child, true);
+				//Bug ZK-1827: native component with rod should also store the widget for used in mount.js(create function)
+				if (child.$instanceof(zk.Native))
+					zAu._storeStub(child);
+			}
 		}
 	}
 
@@ -257,7 +261,7 @@ it will be useful, but WITHOUT ANY WARRANTY.
 		}
 	}
 	function _bkRange(wgt) {
-		if (zk.ie && zk.cfrg) { //Bug ZK-1377
+		if ((zk.ie < 11) && zk.cfrg) { //Bug ZK-1377
 			var cfrg = zk.cfrg;
 			delete zk.cfrg;
 			return cfrg;
@@ -273,7 +277,8 @@ it will be useful, but WITHOUT ANY WARRANTY.
 				//s.t., Window's rerender could gain focus back and receive onblur correctly
 			try {
 				cf.focus();
-				if (cfi.range && cf.getInputNode && (cf = cf.getInputNode()))
+				// B65-ZK-1803: Check if InputNode is visible or not
+				if (cfi.range && cf.getInputNode && (cf = cf.getInputNode()) && zk(cf).isRealVisible())
 					zk(cf).setSelectionRange(cfi.range[0], cfi.range[1]);
 			} finally {
 				_ignCanActivate = false;
@@ -1689,6 +1694,11 @@ wgt.$f().main.setTitle("foo");
 		var dom = opts && opts.dom,
 			cache = opts && opts.cache, visited = [], ck,
 			wgt = this;
+		
+		//Bug ZK-1692: widget may not bind or render yet.
+		if (!wgt.desktop)
+			return false;
+		
 		while (wgt) {
 			if (cache && (ck=wgt.uuid) && (ck=cache[ck]) !== undefined)
 				return _markCache(cache, visited, ck);
@@ -2938,8 +2948,9 @@ unbind_: function (skipper, after) {
 				if (child.z_rod) _unbindrod(child);
 				else if (child.desktop) {
 					child.unbind_(null, after); //don't pass skipper
-					if (zk.feature.ee && child.$instanceof(zk.Native))
-						zAu._storeStub(child); //Bug ZK-1596: native will be transfer to stub in EE, store the widget for used in mount.js
+					//Bug ZK-1596: native will be transfer to stub in EE, store the widget for used in mount.js
+					if (child.$instanceof(zk.Native))
+						zAu._storeStub(child);
 				}
 		}
 	},
@@ -3054,9 +3065,9 @@ unbind_: function (skipper, after) {
 	// to overridden this method have to fix the IE9 issue (ZK-483)
 	// you can just add 1 px more for the offsetWidth
 	getChildMinSize_: function (attr, wgt) { //'w' for width or 'h' for height
-		// feature #ZK-314: zjq.minWidth function return extra 1px in IE9/10
+		// feature #ZK-314: zjq.minWidth function return extra 1px in IE9/10/11
 		var wd = zjq.minWidth(wgt);
-		if(zk.ie > 8 && zk.isLoaded('zul.wgt') && wgt.$instanceof(zul.wgt.Image)) {
+		if((zk.ie > 8) && zk.isLoaded('zul.wgt') && wgt.$instanceof(zul.wgt.Image)) {
 			wd = zk(wgt).offsetWidth();
 		}
 		return attr == 'h' ? zk(wgt).offsetHeight() : wd; //See also bug ZK-483
@@ -3131,7 +3142,10 @@ unbind_: function (skipper, after) {
 		delete this._vflexsz;
 	},
 	resetSize_: function(orient) {
-		(this.$n()).style[orient == 'w' ? 'width': 'height'] = '';
+		var n = this.$n();
+		if (n.scrollTop || n.scrollLeft) // keep the scroll status, the issue also happens (not only IE8) if trigger by resize browser window.
+			return;// do nothing Bug ZK-1885: scrollable div (with vflex) and tooltip
+		n.style[orient == 'w' ? 'width': 'height'] = '';
 	},
 	/** Initializes the widget to make it draggable.
 	 * It is called if {@link #getDraggable} is set (and bound).
@@ -3372,9 +3386,11 @@ focus_: function (timeout) {
 			this.setTopmost();
 			return true;
 		}
-		for (var w = this.firstChild; w; w = w.nextSibling)
-			if (w.isVisible() && w.focus_(timeout))
+		for (var w = this.firstChild; w; w = w.nextSibling) {
+			//B65-ZK-2035: make sure the DOM element of child is real visible
+			if (w.isRealVisible() && w.focus_(timeout))
 				return true;
+		}
 		return false;
 	},
 	/** Checks if this widget can be activated (gaining focus and so on).
@@ -4977,8 +4993,8 @@ zk.Native = zk.$extends(zk.Widget, {
 					s = s.substring(0, j) + ' id="' + this.uuid + '"' + s.substring(j); 
 				}
 			}
-
-			out.push(s);
+			// B65-ZK-1836
+			out.push(s.replace(/<\/(?=script>)/ig, '<\\/'));
 			if (this.value && s.startsWith("<textarea"))
 				out.push(this.value);
 		}
@@ -5113,7 +5129,7 @@ Object skip(zk.Widget wgt);
 			var cf = zk.currentFocus,
 				iscf = cf && cf.getInputNode;
 			
-			if (iscf && zk.ie) //Bug ZK-1377 IE will lost input selection range after remove node
+			if (iscf && zk.ie < 11) //Bug ZK-1377 IE will lost input selection range after remove node
 				zk.cfrg = zk(cf.getInputNode()).getSelectionRange();
 			
 			skip.parentNode.removeChild(skip);

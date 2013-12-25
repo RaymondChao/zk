@@ -33,12 +33,14 @@ import java.util.List;
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
@@ -75,7 +77,9 @@ public class Servlets {
 		_rmozilla = Pattern.compile(".*(mozilla)(?:.*? rv:([\\w.]+))?.*"),
 		_rchrome = Pattern.compile(".*(chrome)[ /]([\\w.]+).*"),
 		_randroid = Pattern.compile(".*(android)[ /]([\\w.]+).*"),
-		_rsafari = Pattern.compile(".*(safari)[ /]([\\w.]+).*");
+		_rsafari = Pattern.compile(".*(safari)[ /]([\\w.]+).*"),
+		_rtrident = Pattern.compile("trident/([0-9\\.]+)");
+				
 
 	private static final boolean _svl24, _svl23, _svl3;
 	static {
@@ -365,7 +369,8 @@ public class Servlets {
 	}
 	private static void browserInfo(Map<String, Object> zk, String ua) {
 		if (ua != null) {
-			ua = ua.toLowerCase();
+			// ZK-1822: In locale Turkish, it can prevent 'I'.toLowerCase becomes 'i' without dot.
+			 ua = ua.toLowerCase(Locale.ENGLISH);
 			if (_clientId != null) {
 				final ClientIdentifier ci = _clientId.matches(ua);
 				if (ci != null) {
@@ -434,6 +439,13 @@ public class Servlets {
 							}
 						}
 					}
+					
+					// ie11~
+					if (ua.contains("trident")) {
+						browserInfo(zk, "ie", version);
+						return;
+					}
+					
 					//the version after gecko/* is confusing, so we
 					//use firefox's version instead
 					browserInfo(zk, "gecko", version);
@@ -482,7 +494,7 @@ public class Servlets {
 	 */
 	public static boolean isBrowser(ServletRequest req, String type) {
 		return (req instanceof HttpServletRequest)
-			&& isBrowser(((HttpServletRequest)req).getHeader("user-agent"), type);
+			&& isBrowser(getUserAgent(req), type);
 	}
 	/** Returns whether the user agent is a browser of the specified type.
 	 *
@@ -538,6 +550,9 @@ public class Servlets {
 		if (vtype == null)
 			return true; //not care about version
 		
+		if (vclient == null)
+			return false; //not matched for Bug ZK-1930
+		
 		double v1 = vclient.doubleValue(), v2 = vtype.doubleValue();
 		return equals ? v1 == v2: v1 >= v2;
 	}	
@@ -549,7 +564,7 @@ public class Servlets {
 	 */
 	public static final boolean isRobot(ServletRequest req) {
 		return (req instanceof HttpServletRequest)
-			&& isRobot(((HttpServletRequest)req).getHeader("user-agent"));
+			&& isRobot(getUserAgent(req));
 	}
 	/** Returns whether the client is a robot (such as Web crawlers).
 	 *
@@ -566,8 +581,8 @@ public class Servlets {
 			return false;
 
 		boolean ie = userAgent.indexOf("MSIE ") >= 0;
-			//Bug 3107026: in Turkish, "MSIE".toLowerCase() is NOT "msie"
-		userAgent = userAgent.toLowerCase();
+			//Bug 3107026: in Turkish, "MSIE".toLowerCase(java.util.Locale.ENGLISH) is NOT "msie"
+		userAgent = userAgent.toLowerCase(java.util.Locale.ENGLISH);
 		return !ie && userAgent.indexOf("msie ") < 0 && userAgent.indexOf("opera") < 0
 			&& userAgent.indexOf("gecko/") < 0 && userAgent.indexOf("safari") < 0
 			&& userAgent.indexOf("zk") < 0 && userAgent.indexOf("rmil") < 0;
@@ -578,7 +593,7 @@ public class Servlets {
 	 */
 	public static final boolean isExplorer(ServletRequest req) {
 		return (req instanceof HttpServletRequest)
-			&& isExplorer(((HttpServletRequest)req).getHeader("user-agent"));
+			&& isExplorer(getUserAgent(req));
 	}
 	/** Returns whether the browser is Internet Explorer.
 	 * If true, it also implies {@link #isExplorer7} is true.
@@ -593,8 +608,8 @@ public class Servlets {
 			return false;
 
 		boolean ie = userAgent.indexOf("MSIE ") >= 0;
-			//Bug 3107026: in Turkish, "MSIE".toLowerCase() is NOT "msie"
-		userAgent = userAgent.toLowerCase();
+			//Bug 3107026: in Turkish, "MSIE".toLowerCase(java.util.Locale.ENGLISH) is NOT "msie"
+		userAgent = userAgent.toLowerCase(java.util.Locale.ENGLISH);
 		return (ie || userAgent.indexOf("msie ") >= 0) && userAgent.indexOf("opera") < 0;
 	}
 	/** Returns whether the browser is Explorer 7 or later.
@@ -602,7 +617,7 @@ public class Servlets {
 	 */
 	public static final boolean isExplorer7(ServletRequest req) {
 		return (req instanceof HttpServletRequest)
-			&& isExplorer7(((HttpServletRequest)req).getHeader("user-agent"));
+			&& isExplorer7(getUserAgent(req));
 	}
 	/** Returns whether the browser is Explorer 7 or later.
 	 *
@@ -621,7 +636,7 @@ public class Servlets {
 	 */
 	public static final boolean isGecko(ServletRequest req) {
 		return (req instanceof HttpServletRequest)
-			&& isGecko(((HttpServletRequest)req).getHeader("user-agent"));
+			&& isGecko(getUserAgent(req));
 	}
 	/** Returns whether the browser is Gecko based, such as Mozilla, Firefox and Camino
 	 * If true, it also implies {@link #isGecko3} is true.
@@ -635,7 +650,7 @@ public class Servlets {
 		if (userAgent == null)
 			return false;
 
-		userAgent = userAgent.toLowerCase();
+		userAgent = userAgent.toLowerCase(java.util.Locale.ENGLISH);
 		return userAgent.indexOf("gecko/") >= 0 && userAgent.indexOf("safari") < 0;
 	}
 	/** Returns whether the browser is Gecko 3 based, such as Firefox 3.
@@ -644,7 +659,7 @@ public class Servlets {
 	 */
 	public static final boolean isGecko3(ServletRequest req) {
 		return (req instanceof HttpServletRequest)
-			&& isGecko3(((HttpServletRequest)req).getHeader("user-agent"));
+			&& isGecko3(getUserAgent(req));
 	}
 	/** Returns whether the browser is Gecko 3 based, such as Firefox 3.
 	 *
@@ -662,7 +677,7 @@ public class Servlets {
 	 */
 	public static final boolean isSafari(ServletRequest req) {
 		return (req instanceof HttpServletRequest)
-			&& isSafari(((HttpServletRequest)req).getHeader("user-agent"));
+			&& isSafari(getUserAgent(req));
 	}
 	/** Returns whether the browser is Safari.
 	 *
@@ -675,7 +690,7 @@ public class Servlets {
 		if (userAgent == null)
 			return false;
 
-		userAgent = userAgent.toLowerCase();
+		userAgent = userAgent.toLowerCase(java.util.Locale.ENGLISH);
 		return userAgent.indexOf("safari") >= 0;
 	}
 	
@@ -684,7 +699,7 @@ public class Servlets {
 	 */
 	public static final boolean isOpera(ServletRequest req) {
 		return (req instanceof HttpServletRequest)
-			&& isOpera(((HttpServletRequest)req).getHeader("user-agent"));
+			&& isOpera(getUserAgent(req));
 	}
 	/** Returns whether the browser is Opera.
 	 *
@@ -697,7 +712,7 @@ public class Servlets {
 		if (userAgent == null)
 			return false;
 
-		userAgent = userAgent.toLowerCase();
+		userAgent = userAgent.toLowerCase(java.util.Locale.ENGLISH);
 		return userAgent.indexOf("opera") >= 0;
 	}
 
@@ -710,7 +725,7 @@ public class Servlets {
 	 */
 	public static final boolean isHilDevice(ServletRequest req) {
 		return (req instanceof HttpServletRequest)
-			&& isHilDevice(((HttpServletRequest)req).getHeader("user-agent"));
+			&& isHilDevice(getUserAgent(req));
 	}
 	/** Returns whether the client is a mobile device supporting HIL
 	 * (Handset Interactive Language).
@@ -726,10 +741,36 @@ public class Servlets {
 			return false;
 
 		//ZK Mobile for Android 1.0 (RMIL; RHIL)
-		userAgent = userAgent.toLowerCase();
+		userAgent = userAgent.toLowerCase(java.util.Locale.ENGLISH);
 		return userAgent.indexOf("zk") >= 0 && userAgent.indexOf("rhil") >= 0;
 	}
-
+	
+	/**
+	 * Returns the IE compatibility information.
+	 * @param request
+	 * @return three double values in array [ie version, trident version, ie real version]
+	 * @since 6.5.5
+	 */
+	public static double[] getIECompatibilityInfo(ServletRequest request) {
+		final String s = ((HttpServletRequest)request).getHeader("user-agent");
+		if (isBrowser(s, "ie")) {
+			final String ua = s.toLowerCase(Locale.ENGLISH);
+			Matcher tridentMatcher = _rtrident.matcher(ua);
+			if(tridentMatcher.find()) {
+				double tridentVersion = Double.parseDouble(tridentMatcher.group(1));
+				Matcher msie = _rmsie.matcher(ua);
+				Matcher ie = _rmozilla.matcher(ua); // ie11~
+				Matcher ieMatcher = msie.matches() ? msie : (ie.matches() ? ie : null);
+				if (ieMatcher != null) {
+					double ieVersion = getVersion(ieMatcher);
+					double ieVersionReal = tridentVersion + 4.0;
+					return new double[]{ieVersion, tridentVersion, ieVersionReal};
+				}
+			}
+		}
+		return null;
+	}
+	
 	/** Returns the user-agent header, which indicates what the client is,
 	 * or an empty string if not available.
 	 *
@@ -737,11 +778,17 @@ public class Servlets {
 	 * the client is with {@link String#indexOf}.
 	 *
 	 * @since 3.0.2
-	 */
+	 */	
 	public static final String getUserAgent(ServletRequest req) {
 		if (req instanceof HttpServletRequest) {
 			final String s = ((HttpServletRequest)req).getHeader("user-agent");
-			if (s != null) return s;
+			if (s != null) {
+				double[] ieCompatibilityInfo = getIECompatibilityInfo(req);
+				if(ieCompatibilityInfo != null) {
+					return s + "; MSIE " + ieCompatibilityInfo[2];
+				}
+				return s;
+			}
 		}
 		return "";
 	}
@@ -968,7 +1015,7 @@ public class Servlets {
 	 */
 	public static final URL getResource(ServletContext ctx, String uri) {
 		try {
-			if (uri != null && uri.toLowerCase().startsWith("file://")) {
+			if (uri != null && uri.toLowerCase(java.util.Locale.ENGLISH).startsWith("file://")) {
 				final File file = new File(new URI(uri));
 				return file.exists() ? file.toURI().toURL(): null;
 					//spec: return null if not found
@@ -992,7 +1039,7 @@ public class Servlets {
 	ServletContext ctx, String uri)
 	throws IOException {
 		try {
-			if (uri != null && uri.toLowerCase().startsWith("file://")) {
+			if (uri != null && uri.toLowerCase(java.util.Locale.ENGLISH).startsWith("file://")) {
 				final File file = new File(new URI(uri));
 				return file.exists() ?
 					new BufferedInputStream (new FileInputStream(file)): null;
@@ -1012,7 +1059,7 @@ public class Servlets {
 	private static URL toURL(String uri)
 	throws MalformedURLException {
 		String s;
-		if (uri != null && ((s = uri.toLowerCase()).startsWith("http://")
+		if (uri != null && ((s = uri.toLowerCase(java.util.Locale.ENGLISH)).startsWith("http://")
 		|| s.startsWith("https://") || s.startsWith("ftp://")))
 			return new URL(uri);
 		return null;
@@ -1267,7 +1314,7 @@ public class Servlets {
 		if (path != null) {
 			int j = path.lastIndexOf('.');
 			if (j >= 0 && path.indexOf('/', j + 1) < 0)
-				return path.substring(j + 1).toLowerCase();
+				return path.substring(j + 1).toLowerCase(java.util.Locale.ENGLISH);
 				//don't worry jsessionid since it is handled by container
 		}
 		return null;
@@ -1306,7 +1353,7 @@ public class Servlets {
 			else if (cc == '/')
 				break;
 		}
-		return dot >= 0 ? path.substring(dot + 1).toLowerCase(): "";
+		return dot >= 0 ? path.substring(dot + 1).toLowerCase(java.util.Locale.ENGLISH): "";
 	}
 
 	/** Returns the request detail infomation.

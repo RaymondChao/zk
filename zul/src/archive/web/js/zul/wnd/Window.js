@@ -141,7 +141,7 @@ it will be useful, but WITHOUT ANY WARRANTY.
 			_posByParent(wgt);
 
 		$n.makeVParent();
-		zWatch.fireDown("onVParent", this);
+		zWatch.fireDown("onVParent", wgt);
 
 		wgt.zsync();
 		_updDomPos(wgt);
@@ -155,7 +155,7 @@ it will be useful, but WITHOUT ANY WARRANTY.
 		if (pos == "parent") _posByParent(wgt);
 
 		$n.makeVParent();
-		zWatch.fireDown("onVParent", this);
+		zWatch.fireDown("onVParent", wgt);
 
 		wgt.zsync();
 		_updDomPos(wgt, true, false, true);
@@ -1063,7 +1063,8 @@ zul.wnd.Window = zk.$extends(zul.Widget, {
 		var cap = this.caption;
 		if(!zk.mobile) { //Bug ZK-1314: avoid focus on input widget to show keyboard on ipad
 			for (var w = this.firstChild; w; w = w.nextSibling)
-				if (w != cap && w.focus_(timeout))
+				//B65-ZK-1797: avoid focusing on removed widge when enable client ROD
+				if (w.desktop && w != cap && w.focus_(timeout))
 					return true;
 		}
 		return cap && cap.focus_(timeout);
@@ -1160,6 +1161,13 @@ zul.wnd.Window = zk.$extends(zul.Widget, {
 			this._mask = null;
 		}
 
+		// ZK-1951, ZK-2045: Page becomes blank after detaching a modal window having an iframe loaded with PDF in IE > 9
+		// A workaround is to hide the iframe before remove
+		if (zk.ie > 9) {
+			var $jq = jq(this.$n()).find('iframe');
+			if ($jq.length)
+				$jq.hide().remove();
+		}
 		zk(node).undoVParent(); //no need to fire onVParent in unbind_
 		zWatch.unlisten({
 			onFloatUp: this,
