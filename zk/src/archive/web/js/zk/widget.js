@@ -3086,9 +3086,9 @@ unbind_: function (skipper, after) {
 	// you can just add 1 px more for the offsetWidth
 	getChildMinSize_: function (attr, wgt) { //'w' for width or 'h' for height
 		if (attr == 'w') {
-			// feature #ZK-314: zjq.minWidth function return extra 1px in IE9/10
+			// feature #ZK-314: zjq.minWidth function return extra 1px in IE9/10/11
 			var wd = zjq.minWidth(wgt);
-			if(zk.ie9 && zk.isLoaded('zul.wgt') && wgt.$instanceof(zul.wgt.Image)) {
+			if(zk.ie > 8 && zk.isLoaded('zul.wgt') && wgt.$instanceof(zul.wgt.Image)) {
 				wd = zk(wgt).offsetWidth();
 			}
 			return wd;
@@ -3400,9 +3400,11 @@ focus_: function (timeout) {
 			this.setTopmost();
 			return true;
 		}
-		for (var w = this.firstChild; w; w = w.nextSibling)
-			if (w.isVisible() && w.focus_(timeout))
+		for (var w = this.firstChild; w; w = w.nextSibling) {
+			//B65-ZK-2035: make sure the DOM element of child is real visible
+			if (w.isRealVisible() && w.focus_(timeout))
 				return true;
+		}
 		return false;
 	},
 	/** Checks if this widget can be activated (gaining focus and so on).
@@ -5098,7 +5100,8 @@ zk.Macro = zk.$extends(zk.Widget, {
 	 * @since 5.0.2
 	 */
 	widgetName: 'macro',
-	_enclosingTag: 'span',
+	// B70-ZK-2065: Replace span with div, because block-level element inside an inline element is not valid.
+	_enclosingTag: 'div',
 
 	$init: function () {
 		this._fellows = {};
@@ -5106,7 +5109,7 @@ zk.Macro = zk.$extends(zk.Widget, {
 	},
 	$define: {
 		/** Returns the tag name for this macro widget.
-		 * <p>Default: span
+		 * <p>Default: div (since 7.0.1)
 		 * @return String the tag name (such as div or span)
 		 * @since 5.0.3
 		 */
@@ -5120,7 +5123,7 @@ zk.Macro = zk.$extends(zk.Widget, {
 	},
 
 	/** Generates the HTML fragment for this macro component.
-	 * <p>Default: it generate SPAN to enclose the HTML fragment
+	 * <p>Default: it generate DIV (since 7.0.1) to enclose the HTML fragment
 	 * of all child widgets.
 	 * @param Array out an array of HTML fragments (String).
 	 */

@@ -1154,6 +1154,9 @@ zul.sel.SelectWidget = zk.$extends(zul.mesh.MeshWidget, {
 		}
 	},
 	_isAllSelected: function () {
+		//B70-ZK-1953: if selectedItems is empty return false.
+		if (!this._selItems.length)
+			return false;
 		var isGroupSelect = this.groupSelect;
 		for (var it = this.getBodyWidgetIterator({skipHidden:true}), w; (w = it.next());) {
 			//Bug ZK-1998: skip listgroup and listgroupfoot widget if groupSelect is false
@@ -1177,7 +1180,8 @@ zul.sel.SelectWidget = zk.$extends(zul.mesh.MeshWidget, {
 			//   this._focusItem still remain the removed one, 
 			//   set it with the newly rendered one to prevent keyboard navigation jump back to top
 			var n, offs;
-			if (this._focusItem != child && (n = child.$n())) {
+			// ZK-2048: should ignore Treechildren
+			if (this._focusItem != child && (n = child.$n()) && !child.$instanceof(zul.sel.Treechildren)) {
 				offs = zk(n).revisedOffset();
 				offs = this._toStyleOffset(this.$n('a'), offs[0] + this.ebody.scrollLeft, offs[1]);
 				if (offs[0] == this._anchorLeft && offs[1] == this._anchorTop)
