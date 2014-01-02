@@ -386,7 +386,7 @@ var Window =
  *
  * <p>Default {@link #getZclass}: z-window.
  */
-zul.wnd.Window = zk.$extends(zul.Widget, {
+zul.wnd.Window = zk.$extends(zul.ContainerWidget, {
 	_mode: 'embedded',
 	_border: 'none',
 	_minheight: 100,
