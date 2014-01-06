@@ -54,7 +54,8 @@ it will be useful, but WITHOUT ANY WARRANTY.
 			var zcls = zk.Widget.$(box._headercm).getZclass() + '-checked',
 				$headercm = jq(box._headercm);
 			$headercm[box._isAllSelected() ? 'addClass': 'removeClass'](zcls);
-			zk($headercm).redoCSS(-1, {'fixFontIcon': true});
+			// B70-ZK-2050: Replace icon with image in IE8.
+			//zk($headercm).redoCSS(-1, {'fixFontIcon': true});
 		}
 	}
 	function _isButton(evt) {
@@ -1154,6 +1155,9 @@ zul.sel.SelectWidget = zk.$extends(zul.mesh.MeshWidget, {
 		}
 	},
 	_isAllSelected: function () {
+		//B70-ZK-1953: if selectedItems is empty return false.
+		if (!this._selItems.length)
+			return false;
 		var isGroupSelect = this.groupSelect;
 		for (var it = this.getBodyWidgetIterator({skipHidden:true}), w; (w = it.next());) {
 			//Bug ZK-1998: skip listgroup and listgroupfoot widget if groupSelect is false
@@ -1177,7 +1181,8 @@ zul.sel.SelectWidget = zk.$extends(zul.mesh.MeshWidget, {
 			//   this._focusItem still remain the removed one, 
 			//   set it with the newly rendered one to prevent keyboard navigation jump back to top
 			var n, offs;
-			if (this._focusItem != child && (n = child.$n())) {
+			// ZK-2048: should ignore Treechildren
+			if (this._focusItem != child && (n = child.$n()) && !child.$instanceof(zul.sel.Treechildren)) {
 				offs = zk(n).revisedOffset();
 				offs = this._toStyleOffset(this.$n('a'), offs[0] + this.ebody.scrollLeft, offs[1]);
 				if (offs[0] == this._anchorLeft && offs[1] == this._anchorTop)

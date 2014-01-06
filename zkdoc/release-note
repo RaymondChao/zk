@@ -2,6 +2,9 @@
 ZK 7.0.1
 * Features
   ZK-2049: Menupopup support toggle type
+  ZK-2075: provide the possibility to display or log missing labels
+  ZK-2087: Add sclass to messagebox
+
 * Bugs
   ZK-2042: Button's autodisable="self" will cause to stop the form request processing  
   ZK-2044: Upload button does not always display the file selection dialog on IE11
@@ -12,7 +15,40 @@ ZK 7.0.1
   ZK-2019: Chosenbox work incorrectly when using ListSubModel and Comparator
   ZK-2046: Scroll position is reset to top if resize column of a grid with rod  
   ZK-2047: IE Datebox calendar overlapping pdf problem
+  ZK-2053: Listgroup checkmark wrong display
+  ZK-2004: The selected Objects of the Chosenbox is incorrect after replace model
+  ZK-2038: Grid is missing the bottom border for certain layout in IE9~11
+  ZK-2024: combobox bound selectedItem not updated on blur event
+  ZK-2048: ZK7 TreeDataEvent.SELECTION_CHANGED never raised
+  ZK-1826: Overlapped window resizes after setTitle(String)
+  ZK-2036: ZK Listbox Aux Headers does not work properly with the visible attribute
+  ZK-1980: Toolbarbutton click failed when draggable true
+  ZK-2059: Upload button doesn't work if it is disabled at the beginning
+  ZK-2060: Tabs in a nested tabbox don't display properly if scrolling enabled in parent tabbox
+  ZK-1829: Selector org.zkoss.zk.ui.select.impl.Tokenizer implementation problem
+  ZK-2003: When resizing using splitter in borderlayout visible popup windows do not close (bandbox popup, combobox popup)
+  ZK-2057: ZK 7 checkbox, cannot set to "is checked" after setChecked(false)
+  ZK-2067: When window contains opened popup, set its mode to modal or overlapped would cause js error
+  ZK-2065: W3C validation error for macro component
+  ZK-2071: frozen scrollbar not working when auxhead is below listhead/columns/treecols
+  ZK-1880: The images of the menu are cut in zksandbox window case
+  ZK-1892: Error when calling setCoords() in Area widget
+  ZK-1852: Processing indicator briefly displayed in non-localized text
+  ZK-1953: Checkmark in listheader is checked when nothing in the listbox
+  ZK-2074: native scroll bar disappearing with frozen on browser resize
+  ZK-2068: In Portallayout, width property set via a controller is reset to the value at page load on browser window resize
+  ZK-2081: Can not customize the text of the tooltip when scrolling the slider
+  ZK-2072: template composition not working as described
+  ZK-1807: bandbox - messed display after its style changed
+  ZK-2070: grid onScroll client-side event not working in 7.0
+  ZK-2084: Doublespinner should display float value
+  ZK-2088: zk.safari show version number on Chrome
 
+* Upgrade Notes
+  + Rename the implemetation class of label loader from org.zkoss.util.resource.impl.LabelLoader
+  to org.zkoss.util.resource.impl.LabelLoaderImpl and create an interface named
+  org.zkoss.util.resource.impl.LabelLoader instead.
+  
   --------
 ZK 7.0.0
 Nov 26, 2013
@@ -77,11 +113,13 @@ Nov 26, 2013
 
   --------
 ZK 6.5.5
+Dec 30, 2013
 * Features
   ZK-1971: ZK wcs file shall exclude the css with zk logo image
   ZK-1973: Server processing effect can be configurable
   ZK-2014: Listbox component support selectAll/unSelectAll event when check/uncheck on select all checkbox
   ZK-2012: zk.ie supports ie11
+  ZK-2061: Security Issue: Version number inserted on each page
 
 * Bugs
   ZK-1944: AUTO scale does not work if the value of decimalebox is bind form VM
@@ -115,7 +153,17 @@ ZK 6.5.5
   ZK-2051: Chrome rmDesktop not working reliably, causing a memory leak in Session
   ZK-2046: Scroll position is reset to top if resize column of a grid with rod  
   ZK-2047: IE Datebox calendar overlapping pdf problem
-
+  ZK-2004: The selected Objects of the Chosenbox is incorrect after replace model
+  ZK-2055: the page stop running when listitem or row bind with object
+  ZK-1552: Combobox and Datebox scroll position in Borderlayout
+  ZK-2035: Invalidate a Panel component with a button will cause a js error
+  ZK-1880: The images of the menu are cut in zksandbox window case
+  ZK-1892: Error when calling setCoords() in Area widget
+  ZK-1954: Vertical scroll appear when remove last listitem from Listbox
+  ZK-1965: zksandbox service.zul throw method getNamespace() not found exception
+  ZK-1852: Processing indicator briefly displayed in non-localized text
+  ZK-2080: Chosenbox with ListSubModel not working if using template to render data
+  
   --------
 
 ZK 6.5.4
@@ -238,6 +286,7 @@ Jul 02, 2013
   ZK-1822: Turkish locale problem during browser detection (on server side)
   ZK-1827: Component inside native component js error
   ZK-1834: Listbox scroll bug
+  ZK-2026: Datebox always displays the current year when blurred if format = "MM.yyyy"
   
   --------
 ZK 6.5.2

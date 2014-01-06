@@ -18,22 +18,39 @@ package org.zkoss.util.resource;
 
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.zkoss.lang.Classes;
+import org.zkoss.lang.Library;
 import org.zkoss.lang.SystemException;
 import org.zkoss.util.resource.impl.LabelLoader;
+import org.zkoss.util.resource.impl.LabelLoaderImpl;
 import org.zkoss.text.MessageFormats;
 import org.zkoss.xel.VariableResolver;
 
 /**
  * Utilities to access labels. A label is a Locale-dependent string
  * that is stored in a Locale-dependent file (*.properties).
+ * <p> Specify the library property of <code>org.zkoss.util.resource.LabelLoader.class</code>
+ * in zk.xml to provide a customized label loader for debugging purpose. (since 7.0.1)
  *
  * @author tomyeh
  */
 public class Labels {
+	private static final Logger log = LoggerFactory.getLogger(Labels.class);
 	private Labels() {} //prevent form misuse
 
-	private static final LabelLoader _loader = new LabelLoader();
+	private static LabelLoader _loader;
 
+	static {
+		try {
+			_loader = (LabelLoader) Classes.newInstanceByThread(Library.getProperty("org.zkoss.util.resource.LabelLoader.class", "org.zkoss.util.resource.impl.LabelLoaderImpl"));
+		} catch (Exception e) {
+			log.warn("", e);
+			if (_loader == null)
+				_loader = new LabelLoaderImpl();
+		}
+	}
 	/** Returns the label of the specified key based
 	 * on the current Locale, or null if no found.
 	 *
