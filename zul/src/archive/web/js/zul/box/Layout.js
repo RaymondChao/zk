@@ -56,7 +56,21 @@ zul.box.Layout = zk.$extends(zk.Widget, {
 	},
 	bind_: function () {
 		this.$supers(zul.box.Layout, 'bind_', arguments);
-		zWatch.listen({onResponse: this});
+		zWatch.listen({onResponse: this, onSize: this});
+		//B65-ZK-2118:.z-hlayout overflow:hidden causes the issue, reset class can to avoid
+		if (zk.ie == 8 && !this.isVertical_()) {
+			jq(this).removeClass(this.getZclass());
+			this.needResetClass = true;
+		}
+	},
+	onSize: function () {
+		if (this.needResetClass)
+			this.resetClass();
+	},
+	resetClass: function () {
+		jq(this).addClass(this.getZclass());
+		zk(this).redoCSS();
+		this.needResetClass = null;
 	},
 	unbind_: function () {
 		zWatch.unlisten({onResponse: this});

@@ -1,0 +1,35 @@
+<?page title="IE8 Borderlayout display" contentType="text/html;charset=UTF-8"?>
+<zk xmlns:h="http://www.w3.org/1999/xhtml">
+	<label>You will see four grid in borderlayout on IE8</label>
+	<borderlayout vflex="1">
+    <west title="West" size="20%" splittable="true" collapsible="true" minsize="80"/>
+    <center>
+        <hlayout vflex="1">
+            <div vflex="1" hflex="1">
+                <vlayout vflex="1">
+                    Grid 1
+                    <grid id="rlist" vflex="1" />
+                </vlayout>
+            </div>
+            <div vflex="1" hflex="1">
+                <vlayout vflex="1">
+                    Grid 2:
+                    <grid id="clist" vflex="1" />
+                </vlayout>
+            </div>
+            <div vflex="1" hflex="1">
+                <vlayout vflex="1">
+                    Grid 3:
+                    <grid id="dlist" vflex="1" />
+                </vlayout>
+            </div>
+            <div vflex="1" hflex="1">
+                <vlayout vflex="1">
+                    Grid 4:
+                    <grid id="ulist" vflex="1" />
+                </vlayout>
+            </div>
+        </hlayout>
+    </center>
+</borderlayout>         
+</zk>
