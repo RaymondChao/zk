@@ -241,7 +241,7 @@ it will be useful, but WITHOUT ANY WARRANTY.
 				if (cwgt) { //try child widgets
 					var first = cwgt,
 						refDim = zk(cwgt).dimension(true);
-					for (; cwgt; cwgt = cwgt.nextSibling) { //bug#3132199: hflex="min" in hlayout
+					for (var zkpOffset; cwgt; cwgt = cwgt.nextSibling) { //bug#3132199: hflex="min" in hlayout
 						if (!cwgt.ignoreFlexSize_('w')) {
 							var c = cwgt.$n();
 							if (c) { //node might not exist if rod on
@@ -266,6 +266,16 @@ it will be useful, but WITHOUT ANY WARRANTY.
 									max += sz;
 								else if (sz > max)
 									max = sz;
+								
+								//B65-ZK-2117: fix the space between inline-block elements causes incorrect width.
+								var prev = cwgt.previousSibling,
+									p;
+								if (prev && ((p = prev.$n()).style.display == 'inline-block' || p.tagName == 'SPAN')) {
+									if (zkpOffset)
+										zkpOffset = zk(wgt.$n()).cmOffset();
+									var temp = _getTextWidth(zk(c), 0);
+									max += temp;
+								}
 							}
 						}
 					}
@@ -322,11 +332,13 @@ it will be useful, but WITHOUT ANY WARRANTY.
 				
 			//bug #3005284: (Chrome)Groupbox hflex="min" in borderlayout wrong sized
 			//bug #3006707: The title of the groupbox shouldn't be strikethrough(Chrome)
-			var margin = wgt.getMarginSize_(o);
+			//B65-ZK-2117: if content doesn't has max size, don't need add bound size to widget, to prevent apply incorrect width.
+			var margin = wgt.getMarginSize_(o),
+				cellWall = wgt.getContentEdgeWidth_() + margin;
 			if (zk.safari && margin < 0)
 				margin = 0;
 			
-			var sz = wgt.setFlexSize_({width: max + wgt.getContentEdgeWidth_() + margin}, true);			
+			var sz = wgt.setFlexSize_({width: max != 0 ? max + cellWall : 0 }, true);		
 			if (sz && sz.width >= 0)
 				wgt._hflexsz = sz.width + margin;
 			wgt.afterChildrenMinFlex_('w');

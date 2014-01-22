@@ -1,0 +1,21 @@
+<?page title="South correct size" contentType="text/html;charset=UTF-8"?>
+<zk>
+    <borderlayout width="500px" height="200px">
+    	<center>
+    		<label>
+    			Click colled button, South size should be just enough to occupy its contents.
+    		</label>
+    	</center>
+        <south id="south" border="normal" title="Container Detail" collapsible="true" open="false" cmargins="0,0,0,0" margins="0,0,0,0" hflex="min">
+            <window mode="embedded" border="none" vflex="min" hflex="1" id="edit_FORM_CONTAINER_DETAILS">
+                <div vflex="min" hflex="min" id="FORM_CONTAINER_DETAILS" style="background:yellow">
+               		<label value="label"></label>
+                	<label value="label"></label>
+                	<label value="label"></label>
+                	<label value="label"></label>
+                	<label value="label"></label>
+                </div>
+            </window>
+        </south>
+    </borderlayout>
+</zk>
