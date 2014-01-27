@@ -941,9 +941,10 @@ zul.mesh.MeshWidget = zk.$extends(zul.Widget, {
 				}
 				
 				// ZK-2114: should not show the bar if vertical scrollbar doesn't exists
-				if (!this.frozen) {
-					var head = this.head,
-					    display = zk(this.ebody).hasVScroll() ? '' : 'none'
+				// ZK-2131: should skip if head doesn't exist
+				var head;
+				if (!this.frozen && (head = this.head)) {
+					var display = zk(this.ebody).hasVScroll() ? '' : 'none'
 					head.$n('hdfaker-bar').style.display = head.$n('bar').style.display = display;
 				}
 			}
@@ -1030,6 +1031,10 @@ zul.mesh.MeshWidget = zk.$extends(zul.Widget, {
 			ebodyrows = this.ebodyrows,
 			efoot = this.efoot,
 			efootrows = this.efootrows;
+		
+		// ZK-2041: will lost width in ie9 if the mesh is inside a modal window   
+		if (zk.ie9_ && ebody && tblwd)
+			ebody.style.width = tblwd + 'px';
 		
 		if (ehead) {
 			if (tblwd) {
