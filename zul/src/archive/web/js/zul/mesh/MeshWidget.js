@@ -635,8 +635,8 @@ zul.mesh.MeshWidget = zk.$extends(zul.Widget, {
 		this.$supers(zul.mesh.MeshWidget, 'bind_', arguments);
 		
 		this._bindDomNode();
-		if (this._hflex != 'min')
-			this._fixHeaders();
+		//B70-ZK-2117: need fix Headers first otherwise it will cause incorrect height in borderlayout
+		this._fixHeaders();
 		if ((zk.webkit || zk.ie < 11) && this.ehead) //sync scroll for input tab key scroll
 			this.domListen_(this.ehead, 'onScroll', '_doSyncScroll');
 		
@@ -941,10 +941,14 @@ zul.mesh.MeshWidget = zk.$extends(zul.Widget, {
 				}
 				
 				// ZK-2114: should not show the bar if vertical scrollbar doesn't exists
-				if (!this.frozen) {
-					var head = this.head,
-					    display = zk(this.ebody).hasVScroll() ? '' : 'none'
-					head.$n('hdfaker-bar').style.display = head.$n('bar').style.display = display;
+				// ZK-2131: should skip if head doesn't exist
+				var head;
+				if (!this.frozen && (head = this.head)) {
+					var display = zk(this.ebody).hasVScroll() ? '' : 'none'
+					// hdfaker-bar occupy space in ie8
+					if (display == 'none' && !zk.ie8_)
+						head.$n('hdfaker-bar').style.display = display;
+					head.$n('bar').style.display = display;
 				}
 			}
 			
@@ -1030,6 +1034,10 @@ zul.mesh.MeshWidget = zk.$extends(zul.Widget, {
 			ebodyrows = this.ebodyrows,
 			efoot = this.efoot,
 			efootrows = this.efootrows;
+		
+		// ZK-2041: will lost width in ie9 if the mesh is inside a modal window   
+		if (zk.ie9_ && ebody && tblwd)
+			ebody.style.width = tblwd + 'px';
 		
 		if (ehead) {
 			if (tblwd) {
