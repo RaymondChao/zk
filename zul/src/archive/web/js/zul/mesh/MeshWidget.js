@@ -293,6 +293,8 @@ it will be useful, but WITHOUT ANY WARRANTY.
 					else
 						wd = wds[i] = zk.parseInt(bdcol.style.width);
 				}
+				// ZK-2130: should save the header width
+				w._origWd = jq.px0(wd);
 				width += wd;
 				++i;
 				bdcol = bdcol.nextSibling;
@@ -741,11 +743,19 @@ zul.mesh.MeshWidget = zk.$extends(zul.Widget, {
 			if (ftfaker)
 				ftcol = ftfaker.firstChild;
 			
+			//B70-ZK-2130: clean table width to prevent incorrect width
+			this.eheadtbl.style.width = '';
+			this.ebodytbl.style.width = '';
+			
 			// ZK-2098: should skip if bdcol doesn't exist
 			for (var w = head.firstChild, wd; w && bdcol; w = w.nextSibling) {
+				// ZK-2130: should save the header width
+				var wwd = parseInt(w.$n().style.width);
+				if (w.isVisible() && wwd > 0.1)
+					w._origWd = jq.px0(wwd);
 				// B70-ZK-2036: Do not adjust widget's width if it is not visible.
 				if (w.isVisible() && (wd = w._hflexWidth) !== undefined) {
-					bdcol.style.width = zk(bdcol).revisedWidth(wd) + 'px';
+					bdcol.style.width = zk(bdcol).revisedWidth(Math.round(wd)) + 'px';
 					hdcol.style.width = bdcol.style.width;
 					if (ftcol)
 						ftcol.style.width = bdcol.style.width;
@@ -822,6 +832,10 @@ zul.mesh.MeshWidget = zk.$extends(zul.Widget, {
 			ehead = this.ehead,
 			efoot = this.efoot;
 
+		// ZK-2069: fire onScroll if has scrollable property
+		if (jq(this).data('scrollable'))
+			zWatch.fireDown('onScroll', this);
+		
 		//B70-ZK-2070: if scrolled, the scrollbar need fire onScroll event.
 		if (scrolled && !(this.fire('onScroll', ebody.scrollLeft).stopped) && this._nativebar)
 			if (this._currentLeft != ebody.scrollLeft) {
